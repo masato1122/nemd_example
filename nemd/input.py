@@ -54,22 +54,15 @@ def write_nemd_input(atoms, index_nemd, type='npt',
     ofs.write("neigh_modify  delay 0\n")
     ofs.write("\n")
     
-    ofs.write("# ----- MD Parameters -----\n")
-    ofs.write("variable NRUN      equal ${MDTIME}/${tstep}\n")
-    ofs.write("variable THERSTEP  equal ${NRUN}/100\n")
-    ofs.write("variable DUMPSTEP  equal ${NRUN}/10\n")
-    ofs.write("variable TEMP      equal 300.00\n")
-    ofs.write("\n")
-    
     ofs.write("# ----- Group -----\n")
     _write_groups(ofs, index_nemd)
     
     ofs.write("# ----- compute -----\n")
     #ofs.write("compute   displace all displace/atom\n")
-    ofs.write("compute   eng      all pe/atom\n")
-    ofs.write("compute   stress   all stress/atom NULL\n")
+    #ofs.write("compute   eng      all pe/atom\n")
+    #ofs.write("compute   stress   all stress/atom NULL\n")
     #ofs.write("compute   eatoms   all reduce sum c_eng\n")
-    ofs.write("compute   stressz  all reduce sum c_stress[3]\n")
+    #ofs.write("compute   stressz  all reduce sum c_stress[3]\n")
     ofs.write("compute   1        all temp\n")
     ofs.write("compute   ke       all ke/atom\n")
     ofs.write("\n")
@@ -159,7 +152,7 @@ def _write_groups(
     ofs.write("\n")
 
 def _write_minimization(ofs, atoms, etol=1e-20, ftol=0.0001, 
-        maxiter=50000, maxeval=50000):
+        maxiter=50000, maxeval=50000, outfile='mini.dump'):
     """ Minimization is stoped by force tolerance with the default setting.
     """
     size = np.zeros(3)
@@ -167,11 +160,13 @@ def _write_minimization(ofs, atoms, etol=1e-20, ftol=0.0001,
         size[j] = np.linalg.norm(atoms.cell[j])
     ofs.write("fix       1 all box/relax x %.2f y %.2f z %.2f\n"%(
         size[0]*0.1, size[1]*0.1, size[2]*0.1))
-    ofs.write("dump      id1 all custom 100000 mini.dump id type x y z\n")
+    if outfile is not None:
+        ofs.write("dump      id1 all custom 100000 mini.dump id type x y z\n")
     ofs.write("thermo    10000\n")
     ofs.write("minimize  %.5e %.5e %d %d\n"%(etol, ftol, maxiter, maxeval))
     ofs.write("unfix     1\n")
-    ofs.write("undump    id1\n")
+    if outfile is not None:
+        ofs.write("undump    id1\n")
     ofs.write("\n")
     
 def _write_npt_simulation(ofs, outfile=None,
@@ -193,7 +188,9 @@ def _write_npt_simulation(ofs, outfile=None,
         ofs.write("id type x y z vx vy vz f_tempave\n")
     ofs.write("run       ${NRUN}\n")
     ofs.write("unfix     2\n")
-    ofs.write("undump    id2\n")
+    ofs.write("unfix     tempave\n")
+    if outfile is not None:
+        ofs.write("undump    id2\n")
     ofs.write("\n")
 
 def _write_nemd_simulation(ofs, thot=310, tcold=290, outfile=None):
@@ -213,9 +210,10 @@ def _write_nemd_simulation(ofs, thot=310, tcold=290, outfile=None):
     ofs.write("thermo_style custom step pe temp f_t1 f_t2 v_diff\n")
     ofs.write("thermo       ${THERSTEP}\n")
     if outfile is not None:
-        ofs.write("dump         coornemd all custom ${DUMPSTEP} %s "%(outfile))
+        ofs.write("dump         nemd all custom ${DUMPSTEP} %s "%(outfile))
         ofs.write("id type x y z f_tempave\n")
     ofs.write("run          ${NRUN}\n")
-    ofs.write("undump coornemd\n")
+    if outfile is not None:
+        ofs.write("undump nemd\n")
 
 

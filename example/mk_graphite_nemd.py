@@ -55,24 +55,23 @@ def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):
                 atoms_nemd.positions[-1] += trans
     return index_nemd, atoms_nemd
 
-def write_lmp_input4nemd(structure, index, datafile='data.lammps'):
+def write_lmp_input4nemd(structure, index_nemd, 
+        datafile='data.lammps', temperature=300., 
+        time_npt=10., time_nemd=100.):
     """ Make scripts for NEMD simulation
     Unit 
     -------
     temperature : K
     time : ps
     """
+    tdiff = temperature * 10./300.
+    tave = temperature
+    tcold = temperature - tdiff
+    thot  = temperature + tdiff
     
-    tave = 300.
-    tcold = 290.
-    thot = 310.
-    
-    time_npt = 10.
-    time_nemd = 10.
-
     ## make a script for NPT simulation
     restartfile0 = 'restart0.nemd'
-    write_nemd_input(structure, index, type='npt',
+    write_nemd_input(structure, index_nemd, type='npt',
             md_time=time_npt,
             read_data=datafile, output='nemd0.in',
             dumpfile='npt.dump', restartfile=restartfile0,
@@ -80,7 +79,7 @@ def write_lmp_input4nemd(structure, index, datafile='data.lammps'):
             )
     
     restartfile1 = 'restart1.nemd'
-    write_nemd_input(structure, index, type='nemd',
+    write_nemd_input(structure, index_nemd, type='nemd',
             md_time=time_nemd,
             read_data=restartfile0, output='nemd1.in',
             dumpfile='nemd1.dump', restartfile='restart1.nemd',
@@ -94,8 +93,8 @@ def main(options):
             distance=options.distance)
     
     ## make a structure for NEMD simulation
-    index_nemd, structure_nemd = \
-            _build_nemd_structure(graphite, nthermo=1, ncenter=3)
+    index_nemd, structure_nemd = _build_nemd_structure(
+            graphite, nthermo=options.nthermo, ncenter=options.ncenter)
     
     ## output xyz file to visualize the structure in which thermostats and
     ## center region are separated.
@@ -104,22 +103,41 @@ def main(options):
     ## output LAMMPS data file
     datafile = 'data.lammps'
     write_lammps_data(datafile, structure_nemd)
-
+    
     ## write NEMD input file
     write_lmp_input4nemd(
             structure_nemd, index_nemd, 
-            datafile=datafile)
-
-    
+            datafile=datafile,
+            temperature=300.,
+            time_npt=10., time_nemd=100.)    
 
 if __name__ == '__main__':
     parser = OptionParser()
     
+    # --- graphite
     parser.add_option("-n", dest="n", type="int",
             default=4, help="chiral number 1")
     parser.add_option("-m", dest="m", type="int",
             default=4, help="chiral number 2")
     
+    # --- structure
+    parser.add_option("--nthermo", dest="nthermo", type="int",
+            default=1, help="number of unit cells in a thermostat (default: 1)")
+    parser.add_option("--ncenter", dest="ncenter", type="int",
+            default=3, 
+            help="number of unit cells in the center region (default: 3)")
+    
+    # --- temperature
+    parser.add_option("--temperature", dest="temperature", type="float",
+            default=300., help="temperature (default: 300 K)")
+    
+    # --- MD time
+    parser.add_option("--time_npt", dest="time_npt", type="float",
+            default=10., help="NPT time (default: 10 ps)")
+    parser.add_option("--time_nemd", dest="time_nemd", type="float",
+            default=100., help="NEMD time (default: 100 ps)")
+    
+    # --- layer distance
     parser.add_option("--distance", dest="distance", type="float",
             default=3.35, help="layer distance [A] (default: 3.35)")
 

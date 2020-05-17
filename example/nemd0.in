@@ -36,12 +36,6 @@ pair_coeff 1 2 lj/cut ${epsilon} ${sigma}
 neighbor      0.3 bin
 neigh_modify  delay 0
 
-# ----- MD Parameters -----
-variable NRUN      equal ${MDTIME}/${tstep}
-variable THERSTEP  equal ${NRUN}/100
-variable DUMPSTEP  equal ${NRUN}/10
-variable TEMP      equal 300.00
-
 # ----- Group -----
 group   bottom id 1:96
 group      hot id 97:192
@@ -54,9 +48,6 @@ group mobile union hot middle cold full
 group free   union middle full
 
 # ----- compute -----
-compute   eng      all pe/atom
-compute   stress   all stress/atom NULL
-compute   stressz  all reduce sum c_stress[3]
 compute   1        all temp
 compute   ke       all ke/atom
 
@@ -75,7 +66,7 @@ undump    id1
 #--- 2. NPT
 reset_timestep 0
 
-velocity  mobile create ${TEMP} 5782461 rot yes dist gaussian
+velocity  mobile create ${TEMP} 877892 rot yes dist gaussian
 fix       2 all npt temp 300.000000 300.000000 ${tdamp} iso 1.000000 1.000000 0.500000
 
 variable  temp atom c_ke*${ee}/1.5/${kb}
@@ -85,6 +76,7 @@ thermo    ${THERSTEP}
 dump      id2 all custom ${DUMPSTEP} npt.dump id type x y z vx vy vz f_tempave
 run       ${NRUN}
 unfix     2
+unfix     tempave
 undump    id2
 
 #--- prepare fore NEMD simulation
