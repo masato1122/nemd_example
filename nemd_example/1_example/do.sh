@@ -1,1 +1,3 @@
-python mk_graphite.py --n1 3 --n2 4
+python mk_graphite.py \
+    --n 4 --m 3 \
+    --distance 3.35
