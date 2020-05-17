@@ -1,1 +1,3 @@
 echo "AAA"
+echo "test"
+
