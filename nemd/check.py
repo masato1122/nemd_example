@@ -15,8 +15,11 @@ def  check_nemd_structure(atoms, index, filename='nemd.xyz'):
     atoms_out = atoms.copy()
     
     ## change chemical symbols depending on the region
-    symbols = ['O', 'C', 'Si']
-    for j, name in enumerate(['left', 'center', 'right']):
+    symbols = ['Ge', 'O', 'C', 'Si', 'Ge']
+    if len(symbols) != len(index):
+        print('Error')
+        exit()
+    for j, name in enumerate(index.keys()):
         for ia in range(index[name][0], index[name][1]+1):
             atoms_out[ia].symbol = symbols[j]
     

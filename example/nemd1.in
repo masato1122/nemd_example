@@ -1,0 +1,84 @@
+clear
+
+# ----- MD parameters -----
+variable tstep   equal 0.000500
+variable tdamp   equal 0.050000
+variable MDTIME  equal 10.000000
+
+variable NRUN      equal ${MDTIME}/${tstep}
+variable THERSTEP  equal ${NRUN}/100
+variable DUMPSTEP  equal ${NRUN}/10
+variable TEMP      equal 300.00
+
+variable  kb   equal 1.3806488e-23
+variable  ee   equal 1.60217657e-19
+
+# ----- Initialize simulation -----
+units         metal
+atom_style    atomic
+dimension     3
+boundary      p p p
+atom_modify   map array
+read_data     restart0.nemd
+timestep      ${tstep}
+
+# ----- Define LJ potential -----
+variable   cutoff equal 12.0000000
+variable  epsilon equal 0.0023900
+variable    sigma equal 3.4000000
+
+pair_style hybrid lj/cut ${cutoff} tersoff tersoff
+pair_coeff * * tersoff 1 opt.tersoff C NULL
+pair_coeff * * tersoff 2 opt.tersoff NULL C
+pair_coeff 1 2 lj/cut ${epsilon} ${sigma}
+
+# ---- Bin ----- 
+neighbor      0.3 bin
+neigh_modify  delay 0
+
+# ----- MD Parameters -----
+variable NRUN      equal ${MDTIME}/${tstep}
+variable THERSTEP  equal ${NRUN}/100
+variable DUMPSTEP  equal ${NRUN}/10
+variable TEMP      equal 300.00
+
+# ----- Group -----
+group   bottom id 1:96
+group      hot id 97:192
+group   middle id 193:480
+group     cold id 481:576
+group      top id 577:672
+
+group const  union bottom top
+group mobile union hot middle cold full
+group free   union middle full
+
+# ----- compute -----
+compute   eng      all pe/atom
+compute   stress   all stress/atom NULL
+compute   stressz  all reduce sum c_stress[3]
+compute   1        all temp
+compute   ke       all ke/atom
+
+reset_timestep 0
+
+# ----- NEMD simulation -----
+fix frozen const setforce 0.0 0.0 0.0
+fix t1 hot  nvt temp 310.00 310.00 ${tdamp}
+fix t2 cold nvt temp 290.00 290.00 ${tdamp}
+fix m1 free nve
+
+variable temp atom c_ke*${ee}/1.5/${kb}
+variable diff equal f_t2-f_t1
+
+variable   temp atom c_ke*${ee}/1.5/${kb}
+fix        tempave all ave/atom 1 ${THERSTEP} ${THERSTEP} v_temp
+#--- OUTPUT
+thermo_style custom step pe temp f_t1 f_t2 v_diff
+thermo       ${THERSTEP}
+dump         coornemd all custom ${DUMPSTEP} nemd1.dump id type x y z f_tempave
+run          ${NRUN}
+undump coornemd
+write_restart  restart1.nemd
+
+print "All done!"
