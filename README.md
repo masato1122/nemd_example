@@ -14,6 +14,14 @@ PYTHONPATH=$PYTHONPATH:../nemd
 python mk_graphite_nemd.py -n 4 -m 3
 ```
 
+``` simple way
+cd ~/example
+sh do.sh
+cd ./out
+lmp_mpi < nemd0.in > nemd0.log
+lmp_mpi < nemd1.in > nemd1.log
+```
+
 # Author
 
 * Masato Ohnishi
