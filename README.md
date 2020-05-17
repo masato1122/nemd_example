@@ -1,6 +1,6 @@
 # nemd_example
 
-Simple example for NEMD simulation
+Simple example for NEMD simulation with LAMMPS package
 
 # Installation
 
