@@ -3,8 +3,9 @@ Example for NEMD simulation
 
 # How to Use
 
-``` abc
+``` discriptions
 cd ~/example
+PYTHONPATH=$PYTHONPATH:../nemd
 python mk_graphite_nemd.py -n 4 -m 3
 ```
 

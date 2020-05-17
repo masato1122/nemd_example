@@ -1,6 +1,6 @@
 PYTHONPATH=$PYTHONPATH:../
 
-python mk_nemd_structure.py \
+python mk_graphite_nemd.py \
     -n 4 -m 3
 
 

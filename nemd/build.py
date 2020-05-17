@@ -136,4 +136,7 @@ def write_lammps_data(filename, images=None):
         ofs.write("\n")
     ofs.close()
 
+    print(" Output", filename)
+
+
 

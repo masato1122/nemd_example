@@ -53,14 +53,19 @@ def _build_nemd_structure(atoms, nthermo=2, ncenter=10):
 
 def main(options):
     
+    ## make a conventional cell of graphite
     graphite = build_graphite(n=options.n, m=options.m, 
             distance=options.distance)
     
+    ## make a structure for NEMD simulation
     index_nemd, structure_nemd = \
             _build_nemd_structure(graphite, nthermo=1, ncenter=3)
     
+    ## output xyz file to visualize the structure in which thermostats and
+    ## center region are separated.
     check_nemd_structure(structure_nemd, index_nemd, filename='nemd_check.xyz')
-
+    
+    ## output LAMMPS data file
     write_lammps_data('data.lammps', structure_nemd)
 
 if __name__ == '__main__':
