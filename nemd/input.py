@@ -2,15 +2,17 @@
 import numpy as np
 
 def write_nemd_input(atoms, index_nemd, type='npt', 
-        read_data='data.lammps', output='nemd.in', 
+        read_data='data.lammps', output='nemd.in', potential_file='opt.tersoff',
         dumpfile=None, restartfile='restart.nemd', 
         timestep=0.0005, damping_time=0.05, md_time=None, 
         ntotal_thermo=100, ntotal_dump=10,
         taverage=300., tcold=290., thot=310.,
         pressure=1.0, 
         lj_params={'cutoff':12.00, 'epsilon':0.00239, 'sigma':3.4}):
-    """
-
+    """ Make LAMMPS scripts for NEMD simulations
+    atoms : Atoms object
+    index_nemd : dictionary of array of integers
+        index_nemd[name][2]
     """
     ## get the list of tags which denote the layer index
     tags_list = list(set(atoms.get_tags()))
@@ -39,15 +41,22 @@ def write_nemd_input(atoms, index_nemd, type='npt',
     ofs.write("dimension     3\n")
     ofs.write("boundary      p p p\n")
     ofs.write("atom_modify   map array\n")
-    ofs.write("read_data     %s\n"%(read_data))
+    if type == 'npt':
+        ofs.write("read_data     %s\n"%(read_data))
+    elif type == 'nemd':
+        ofs.write("read_restart  %s\n"%(read_data))
+    else:
+        print(" Error: %s is not defined."%(type))
+        exit()
+    
     ofs.write("timestep      ${tstep}\n")
     ofs.write("\n")
     
     """ This part should be modified for more complex materials.
     """
     ofs.write("# ----- Define LJ potential -----\n")
-    _write_lj_potential_graphite(ofs, lj_params, nlayers=len(tags_list))
-    
+    _write_lj_potential_graphite(ofs, lj_params, nlayers=len(tags_list),
+            potfile=potential_file)
     
     ofs.write("# ---- Bin ----- \n")
     ofs.write("neighbor      0.3 bin\n")
@@ -98,8 +107,11 @@ def write_nemd_input(atoms, index_nemd, type='npt',
     ofs.write("write_restart  %s\n"%(restartfile))
     ofs.write("\n")
     ofs.write("print \"All done!\"\n")
+    ofs.close()
+    print(" Output", output)
 
-def _write_lj_potential_graphite(ofs, lj_params, nlayers=None):
+def _write_lj_potential_graphite(ofs, lj_params, nlayers=None,
+        potfile='opt.tersoff'):
     """ Write LJ potential for graphite
     lj_params : dictionary 
         lj_params[key] : float
@@ -119,7 +131,7 @@ def _write_lj_potential_graphite(ofs, lj_params, nlayers=None):
     ## define interlayer potentials
     ofs.write("\n")
     for i in range(nlayers):
-        ofs.write("pair_coeff * * tersoff %d opt.tersoff"%(i+1))
+        ofs.write("pair_coeff * * tersoff %d %s"%(i+1, potfile))
         for j in range(nlayers):
             if i == j:
                 ofs.write(" C")
@@ -147,9 +159,10 @@ def _write_groups(
             print(" Error: %s region does not exist."%(group))
             exit()
     ofs.write("group const  union bottom top\n")
-    ofs.write("group mobile union hot middle cold full\n")
-    ofs.write("group free   union middle full\n")
+    ofs.write("group mobile union hot middle cold\n")
+    ofs.write("group free   union middle\n")
     ofs.write("\n")
+
 
 def _write_minimization(ofs, atoms, etol=1e-20, ftol=0.0001, 
         maxiter=50000, maxeval=50000, outfile='mini.dump'):
@@ -161,7 +174,9 @@ def _write_minimization(ofs, atoms, etol=1e-20, ftol=0.0001,
     ofs.write("fix       1 all box/relax x %.2f y %.2f z %.2f\n"%(
         size[0]*0.1, size[1]*0.1, size[2]*0.1))
     if outfile is not None:
-        ofs.write("dump      id1 all custom 100000 mini.dump id type x y z\n")
+        ofs.write("dump         id1 all custom 100000 mini.dump id type x y z\n")
+        ofs.write("dump_modify  id1 sort id\n") 
+        ofs.write("dump_modify  id1 format float %13.8f \n") 
     ofs.write("thermo    10000\n")
     ofs.write("minimize  %.5e %.5e %d %d\n"%(etol, ftol, maxiter, maxeval))
     ofs.write("unfix     1\n")
@@ -184,8 +199,10 @@ def _write_npt_simulation(ofs, outfile=None,
     ofs.write("\n")
     ofs.write("thermo    ${THERSTEP}\n")
     if outfile is not None:
-        ofs.write("dump      id2 all custom ${DUMPSTEP} %s "%(outfile))
-        ofs.write("id type x y z vx vy vz f_tempave\n")
+        ofs.write("dump         id2 all custom ${DUMPSTEP} %s "\
+                "id type x y z vx vy vz f_tempave\n"%(outfile))
+        ofs.write("dump_modify  id2 sort id\n") 
+        ofs.write("dump_modify  id2 format float %13.8f \n") 
     ofs.write("run       ${NRUN}\n")
     ofs.write("unfix     2\n")
     ofs.write("unfix     tempave\n")
@@ -200,20 +217,19 @@ def _write_nemd_simulation(ofs, thot=310, tcold=290, outfile=None):
     ofs.write("fix t2 cold nvt temp %.2f %.2f ${tdamp}\n"%(tcold, tcold))
     ofs.write("fix m1 free nve\n")
     ofs.write("\n")
-    ofs.write("variable temp atom c_ke*${ee}/1.5/${kb}\n")
-    ofs.write("variable diff equal f_t2-f_t1\n")
+    ofs.write("variable     temp atom c_ke*${ee}/1.5/${kb}\n")
+    ofs.write("variable     diff equal f_t2-f_t1\n")
+    ofs.write("fix          tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp\n")
     ofs.write("\n")
-    ofs.write("variable   temp atom c_ke*${ee}/1.5/${kb}\n")
-    ofs.write("fix        tempave all ave/atom 1 ${THERSTEP} ${THERSTEP} v_temp\n")
-    
-    ofs.write("#--- OUTPUT\n")
     ofs.write("thermo_style custom step pe temp f_t1 f_t2 v_diff\n")
     ofs.write("thermo       ${THERSTEP}\n")
     if outfile is not None:
-        ofs.write("dump         nemd all custom ${DUMPSTEP} %s "%(outfile))
-        ofs.write("id type x y z f_tempave\n")
+        ofs.write("dump         nemd all custom ${DUMPSTEP} %s "\
+                "id type x y z vx vy vz f_tempave\n"%(outfile))
+        ofs.write("dump_modify  nemd sort id\n") 
+        ofs.write("dump_modify  nemd format float %13.8f \n") 
     ofs.write("run          ${NRUN}\n")
     if outfile is not None:
-        ofs.write("undump nemd\n")
-
-
+        ofs.write("undump     nemd\n")
+    ofs.write("\n")
+    

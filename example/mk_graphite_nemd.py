@@ -31,7 +31,7 @@ def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):
         index_nemd[name] : range of atomic index in the 'name' region
         name : 'left', 'center', or 'right'
     """
-    natoms = atoms.get_number_of_atoms()
+    natoms = len(atoms)
     
     ## set cell size
     atoms_nemd = Atoms()
@@ -50,7 +50,7 @@ def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):
         count = index_nemd[names[j]][1] + 1
         for ic in range(ncells[j]):
             trans[2] += atoms.cell[2,2]
-            for ia in range(atoms.get_number_of_atoms()):
+            for ia in range(len(atoms)):
                 atoms_nemd.append(atoms[ia])
                 atoms_nemd.positions[-1] += trans
     return index_nemd, atoms_nemd

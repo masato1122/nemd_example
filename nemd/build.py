@@ -35,6 +35,7 @@ def build_graphite(n=3, m=4, type='armchair', distance=3.35, C_C=1.42,
     
     ## set the layer distance
     layer1.cell[1,1] = 2. * distance
+    layer1.positions[:,1] = 0.25 * distance
     
     ## make the second layer
     layer2 = layer1.copy()
@@ -42,11 +43,11 @@ def build_graphite(n=3, m=4, type='armchair', distance=3.35, C_C=1.42,
     disp[0] = 0.
     disp[1] = distance
     disp[2] = C_C
-    layer2.translate(np.tile(disp, (layer1.get_number_of_atoms(), 1)))
+    layer2.translate(np.tile(disp, (len(layer1), 1)))
     
     ## merge two layers
     graphite = layer1
-    for ia in range(layer2.get_number_of_atoms()):
+    for ia in range(len(layer2)):
         graphite.append(layer2[ia])
 
     ## The out-of-plane direction is chnaged from y-axis to z-axis.
@@ -60,7 +61,7 @@ def build_graphite(n=3, m=4, type='armchair', distance=3.35, C_C=1.42,
     ## label layers
     tag_cur = 1
     zmax = graphite.positions[0,2]
-    for ia in range(graphite.get_number_of_atoms()):
+    for ia in range(len(graphite)):
         if abs(graphite.positions[ia,2] - zmax) < thd_layer:
             pass
         else:
@@ -93,7 +94,7 @@ def write_lammps_data(filename, images=None):
     
     ## get corresponding list of symbols to the tag list
     symbols_list = {}
-    for ia in range(images.get_number_of_atoms()):
+    for ia in range(len(images)):
         symbols_list[images[ia].tag] = images[ia].symbol
     
     # --- check if the system is rectangular or not
@@ -102,7 +103,7 @@ def write_lammps_data(filename, images=None):
         exit()
     
     # --- output a file
-    natoms = images.get_number_of_atoms()
+    natoms = len(images)
     ofs = open(filename, "w")
     
     ofs.write("Position data\n")

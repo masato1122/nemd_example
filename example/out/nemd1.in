@@ -19,7 +19,7 @@ atom_style    atomic
 dimension     3
 boundary      p p p
 atom_modify   map array
-read_data     restart0.nemd
+read_restart  restart0.nemd
 timestep      ${tstep}
 
 # ----- Define LJ potential -----
@@ -38,14 +38,14 @@ neigh_modify  delay 0
 
 # ----- Group -----
 group   bottom id 1:96
-group      hot id 97:192
-group   middle id 193:480
-group     cold id 481:576
-group      top id 577:672
+group      hot id 97:288
+group   middle id 289:1248
+group     cold id 1249:1440
+group      top id 1441:1536
 
 group const  union bottom top
-group mobile union hot middle cold full
-group free   union middle full
+group mobile union hot middle cold
+group free   union middle
 
 # ----- compute -----
 compute   1        all temp
@@ -59,17 +59,18 @@ fix t1 hot  nvt temp 310.00 310.00 ${tdamp}
 fix t2 cold nvt temp 290.00 290.00 ${tdamp}
 fix m1 free nve
 
-variable temp atom c_ke*${ee}/1.5/${kb}
-variable diff equal f_t2-f_t1
+variable     temp atom c_ke*${ee}/1.5/${kb}
+variable     diff equal f_t2-f_t1
+fix          tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp
 
-variable   temp atom c_ke*${ee}/1.5/${kb}
-fix        tempave all ave/atom 1 ${THERSTEP} ${THERSTEP} v_temp
-#--- OUTPUT
 thermo_style custom step pe temp f_t1 f_t2 v_diff
 thermo       ${THERSTEP}
-dump         nemd all custom ${DUMPSTEP} nemd1.dump id type x y z f_tempave
+dump         nemd all custom ${DUMPSTEP} nemd1.dump id type x y z vx vy vz f_tempave
+dump_modify  nemd sort id
+dump_modify  nemd format float %13.8f 
 run          ${NRUN}
-undump nemd
+undump     nemd
+
 write_restart  restart1.nemd
 
 print "All done!"
