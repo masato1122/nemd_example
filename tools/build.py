@@ -47,17 +47,17 @@ def build_graphite(n=3, m=4, type='armchair', distance=3.35, C_C=1.42):
     for ia in range(layer2.get_number_of_atoms()):
         graphite.append(layer2[ia])
 
-    print(graphite.cell)
-    
-    ## The initial out-of-plane direction is y-axis.
-    ## It is chnaged to z-axis.
-    graphite.rotate(90.0, 'x', rotate_cell=True)
-    graphite.rotate('y', 'z', rotate_cell=True)
-    
-    print(graphite.cell)
+    ## The out-of-plane direction is chnaged from y-axis to z-axis.
+    pos_tmp = np.copy(graphite.positions)
+    cell_tmp = np.copy(graphite.cell)
+    graphite.positions[:,1] = pos_tmp[:,2]
+    graphite.positions[:,2] = pos_tmp[:,1]
+    graphite.cell[1] = np.array([0., cell_tmp[2,2], 0.])
+    graphite.cell[2] = np.array([0., 0., cell_tmp[1,1]])
+
     return graphite
 
-    def main(options):
+def main(options):
     
     graphite = build_graphite(n=options.n, m=options.m, 
             distance=options.distance)
