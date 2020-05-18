@@ -99,3 +99,97 @@ def  check_nemd_structure(atoms, index, filename='nemd.xyz'):
 
     print(" Output", filename)
 
+def read_group_ids(filename):
+    """ Read group IDs from a LAMMPS input script
+    """
+    ifs = open(filename, 'r')
+    lines = ifs.readlines()
+    ifs.close()
+    
+    group_ids = {}
+    for line in lines:
+        data = line.split()
+        if len(data) < 4:
+            continue
+        if line[0] == "#":
+            continue
+        if data[0] == "group" and data[2] == "id":
+            ids = data[3].split(':')
+            group_ids[data[1]] = [int(ids[0]), int(ids[1])]
+    return group_ids
+
+def read_temperature_from_dump(filename, natoms=None, nskip=9, 
+        label='f_tempave'):
+    
+    ifs = open(filename, "r")
+    lines = ifs.readlines()
+    nstructures = int(len(lines) / (natoms + nskip))
+    ifs.close()
+    
+    ## read temperatures
+    temperatures = np.zeros((nstructures, natoms))
+    for ist in range(nstructures):
+        istart = ist * (natoms + nskip) + nskip
+        
+        ## get label
+        labels = lines[istart-1].split()
+        if label not in labels:
+            print(" %s does not exist in"%(label), end=" ")
+            print(labels)
+            exit()
+            return None
+        
+        idx_temp = labels.index(label) - 2
+        
+        ## read temperature of each atom
+        for ia in range(natoms):
+            data = lines[istart+ia].split()
+            temperatures[ist,ia] = float(data[idx_temp])
+    
+    return temperatures
+
+#def get_layer_temperature(filename, lmpinput=None, 
+#        atoms=None, nskip=9, label='f_tempave', iaxis=2,
+#        thd_layer=1.0):
+#    """ Atoms in 'atoms' object should be ordered along z-axis.
+#    """
+#    
+#    ids_group = read_group_ids(lmpinput)
+#    temperatures = read_temperature_from_dump(
+#            filename, natoms=len(atoms), nskip=nskip, label=label)
+#    
+#    id_layers = {}
+#    for group in ids_group.keys():
+#        
+#        id_layers[group] = []
+#        
+#        ##
+#        i0 = ids_group[group][0] - 1
+#        i1 = ids_group[group][1]
+#        
+#        ##
+#        ここから
+#        ##
+#        idx_sort = np.argsort(atoms.positions[i0:i1,iaxis])
+#        iave0 = 0
+#        for ii in range(len(idx_sort)-1):
+#            isort = idx_sort[ii]
+#            ia_cur = i0 + isort
+#            ia_next = i0 + isort + 1
+#            if (atoms[ia_next].position[iaxis] -
+#                    atoms[ia_cur].position[iaxis]) > thd_layer:
+#                id_layers[group].append(idx_sort[iave0:ii])
+#                iave0 = ii + 1
+#        id_layers[group].append([iave0, ia_cur])
+#        
+#        print(idx_sort)
+#        print(id_layers) 
+#
+#
+#        exit()
+#    
+#    print(ids_group)
+#    print("A")
+
+
+

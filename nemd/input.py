@@ -200,7 +200,7 @@ def _write_npt_simulation(ofs, outfile=None,
     ofs.write("thermo    ${THERSTEP}\n")
     if outfile is not None:
         ofs.write("dump         id2 all custom ${DUMPSTEP} %s "\
-                "id type x y z vx vy vz f_tempave\n"%(outfile))
+                "id type x y z f_tempave\n"%(outfile))
         ofs.write("dump_modify  id2 sort id\n") 
         ofs.write("dump_modify  id2 format float %13.8f \n") 
     ofs.write("run       ${NRUN}\n")
