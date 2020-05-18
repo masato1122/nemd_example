@@ -4,8 +4,8 @@ from optparse import OptionParser
 from ase import Atoms
 import ase.io
 
-from nemd.build import build_graphite, write_lammps_data
-from nemd.check import check_nemd_structure
+from nemd.build import build_graphite
+from nemd.file  import check_nemd_structure, write_lammps_data
 from nemd.input import write_nemd_input
 
 def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):

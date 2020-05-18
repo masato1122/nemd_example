@@ -7,7 +7,7 @@ tnpt=100; tnemd=300
 
 python mk_graphite_nemd.py \
     -n 4 -m 3 \
-    --nthermo 2 --ncenter 10 \
+    --nthermo 4 --ncenter 20 \
     --time_npt $tnpt --time_nemd $tnemd
 
 cdir=./out
