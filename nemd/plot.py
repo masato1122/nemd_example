@@ -13,17 +13,11 @@ def plot_temperature_profile(
         dpi=300, fontsize=7, fig_width=3.3, aspect=0.9, lw=0.5, ms=7.0):
     """ Plot temperature for each atom or segment. Use original atomic positions
     (atoms) and temperatures in "dumpfile".
-
     """
     ## Read temperatures
-    from nemd.file import read_temperature_from_dump
-    temperatures = read_temperature_from_dump(dumpfile, natoms=len(atoms))
-
-    ## get averaged values
-    temp_ave = np.zeros(len(atoms))
-    for ia in range(len(atoms)):
-        temp_ave[ia] = np.average(temperatures[:,ia])
-    
+    from nemd.file import get_averaged_temperatures_atom
+    temp_ave = get_averaged_temperatures_atom(dumpfile, natoms=len(atoms))
+     
     ## Read group IDs
     from nemd.file import read_group_ids
     ids = read_group_ids(lmpinput)
@@ -53,5 +47,7 @@ def plot_temperature_profile(
     ## save a figure
     if figname is not None:
         fig.savefig(figname, dpi=dpi, bbox_inches='tight')
+        print(" Output", figname)
     return fig
+
 

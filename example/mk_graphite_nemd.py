@@ -6,7 +6,7 @@ import ase.io
 
 from nemd.build import build_graphite
 from nemd.file  import check_nemd_structure, write_lammps_data
-from nemd.input import write_nemd_input
+from nemd.input import write_nemd_inputs
 
 def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):
     """ Make a structure for NEMD simulation with simply repeating the unit
@@ -55,37 +55,6 @@ def _build_nemd_structure(atoms, nfix=1, nthermo=2, ncenter=10):
                 atoms_nemd.positions[-1] += trans
     return index_nemd, atoms_nemd
 
-def write_lmp_input4nemd(structure, index_nemd, 
-        datafile='data.lammps', temperature=300., 
-        time_npt=10., time_nemd=100.):
-    """ Make scripts for NEMD simulation
-    Unit 
-    -------
-    temperature : K
-    time : ps
-    """
-    tdiff = temperature * 10./300.
-    tave = temperature
-    tcold = temperature - tdiff
-    thot  = temperature + tdiff
-    
-    ## make a script for NPT simulation
-    restartfile0 = 'restart0.nemd'
-    write_nemd_input(structure, index_nemd, type='npt',
-            md_time=time_npt,
-            read_data=datafile, output='nemd0.in',
-            dumpfile='npt.dump', restartfile=restartfile0,
-            taverage=tave, tcold=tcold, thot=thot
-            )
-    
-    restartfile1 = 'restart1.nemd'
-    write_nemd_input(structure, index_nemd, type='nemd',
-            md_time=time_nemd,
-            read_data=restartfile0, output='nemd1.in',
-            dumpfile='nemd1.dump', restartfile='restart1.nemd',
-            taverage=tave, tcold=tcold, thot=thot
-            )
-
 def main(options):
     
     ## make a conventional cell of graphite
@@ -105,11 +74,12 @@ def main(options):
     write_lammps_data(datafile, structure_nemd)
     
     ## write NEMD input file
-    write_lmp_input4nemd(
-            structure_nemd, index_nemd, 
+    write_nemd_inputs(
+            structure_nemd, index_nemd,
             datafile=datafile,
-            temperature=300.,
-            time_npt=10., time_nemd=100.)    
+            time_npt=options.time_npt,
+            time_nemd=options.time_nemd,
+            tcold=options.tcold, thot=options.thot)
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -128,8 +98,10 @@ if __name__ == '__main__':
             help="number of unit cells in the center region (default: 3)")
     
     # --- temperature
-    parser.add_option("--temperature", dest="temperature", type="float",
-            default=300., help="temperature (default: 300 K)")
+    parser.add_option("--thot", dest="thot", type="float",
+            default=310., help="hot temperature (default: 300 K)")
+    parser.add_option("--tcold", dest="tcold", type="float",
+            default=290., help="cold temperature (default: 290 K)")
     
     # --- MD time
     parser.add_option("--time_npt", dest="time_npt", type="float",
