@@ -259,7 +259,7 @@ def _write_npt_simulation(ofs, outfile=None,
 
 def _write_nemd_simulation(ofs, thot=310, tcold=290, outfile=None):
     
-    ofs.write("fix frozen const freeze\n")
+    ofs.write("fix frozen const setforce 0.0 0.0 0.0\n")
     ofs.write("fix t1 hot  nvt temp %.2f %.2f ${tdamp}\n"%(thot, thot))
     ofs.write("fix t2 cold nvt temp %.2f %.2f ${tdamp}\n"%(tcold, tcold))
     ofs.write("fix m1 free nve\n")
