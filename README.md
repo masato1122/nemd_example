@@ -8,11 +8,15 @@ python>=3.0, ase, pymatgen
 
 # How to Use
 
+To make LAMMPS input scripts:
+
 ``` discriptions
 cd ~/example
 PYTHONPATH=$PYTHONPATH:../nemd
 python mk_graphite_nemd.py -n 4 -m 3
 ```
+
+or
 
 ``` simple way
 cd ~/example
@@ -22,7 +26,7 @@ lmp_mpi < nemd0.in > nemd0.log
 lmp_mpi < nemd1.in > nemd1.log
 ```
 
-after the calculation is finished,
+After the calculations are finished, analze results:
 
 ```
 sh analyze.sh
