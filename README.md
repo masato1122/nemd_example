@@ -4,7 +4,7 @@ Simple example for NEMD simulation with LAMMPS package
 
 # Installation
 
-python >= 3.0, ase, pymatgen
+python>=3.0, ase, pymatgen
 
 # How to Use
 
@@ -20,6 +20,12 @@ sh do.sh
 cd ./out
 lmp_mpi < nemd0.in > nemd0.log
 lmp_mpi < nemd1.in > nemd1.log
+```
+
+after the calculation is finished,
+
+```
+sh analyze.sh
 ```
 
 # Author

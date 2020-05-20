@@ -66,7 +66,7 @@ def main(options):
             graphite, nthermo=options.nthermo, ncenter=options.ncenter)
     
     ## output xyz file to visualize the structure in which thermostats and
-    ## center region are separated.
+    ## center region are differently colored.
     check_nemd_structure(structure_nemd, index_nemd, filename='nemd_check.xyz')
     
     ## output LAMMPS data file

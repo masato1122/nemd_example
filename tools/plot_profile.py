@@ -2,7 +2,7 @@
 import numpy as np
 from optparse import OptionParser
 
-from nemd.plot import plot_temperature_profile
+from nemd.plot import plot_temperature_profile_atom
 
 def main(options):
     
@@ -14,7 +14,7 @@ def main(options):
     
     ## plot temperature profile
     figname = "fig_profile.png"
-    plot_temperature_profile(
+    plot_temperature_profile_atom(
             options.lmpdump, atoms=atoms,
             lmpinput=options.lmpinput,
             figname=figname)

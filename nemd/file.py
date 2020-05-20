@@ -178,9 +178,9 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
 
     Return
     ---------
-    zt_layers : dictionary of ndarray
-        zt_layers[group] : shape=(nlayers, 2)
-        positions and averaged temperatures at each layer
+    zt_layers : dict of dict of narray
+        zt_layers[group][keyword] : shape=(nlayers)
+        keyword : 'positions', 'temperatures', or 'natoms'
     outfile : string
         output file name. If it is given, averaged positions and temperatures of
         the layers will be written.
@@ -209,14 +209,20 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
     
     ## get the averaged positions and temperatures in the layers
     zt_layers = {}
+    keys = ['natoms', 'positions', 'temperatures']
     for group in ids_group.keys():
         nlayers = len(ids_layers[group])
-        zt_layers[group] = np.zeros((nlayers,2))
+        zt_layers[group] = {}
+        for kw in keys:
+            zt_layers[group][kw] = np.zeros(nlayers)
         for il in range(nlayers):
             idx = ids_layers[group][il]
-            zt_layers[group][il,0] = np.average(atoms.positions[idx,iaxis])
-            zt_layers[group][il,1] = np.average(tave_atom[idx])
-
+            zt_layers[group]['positions'][il] = \
+                    np.average(atoms.positions[idx,iaxis])
+            zt_layers[group]['temperatures'][il] = \
+                    np.average(tave_atom[idx])
+            zt_layers[group]['natoms'][il] = len(idx)
+    
     ## outputfile
     if outfile is not None:
         _write_temperatures_layer(outfile, zt_layers)
@@ -225,14 +231,17 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
 
 def _write_temperatures_layer(outfile, temp_layers):
     ofs = open(outfile, 'w')
+    ofs.write("# natoms position temperature\n")
     for group in temp_layers.keys():
-        ofs.write('# %s\n'%(group))
-        nlayers = len(temp_layers[group])
+        ofs.write('## %s\n'%(group))
+        nlayers = len(temp_layers[group]['natoms'])
         for il in range(nlayers):
-            ofs.write("%15.8f  %8.3f\n"%(
-                temp_layers[group][il,0], 
-                temp_layers[group][il,1]
+            ofs.write("%3d %15.8f  %8.3f\n"%(
+                temp_layers[group]['natoms'][il], 
+                temp_layers[group]['positions'][il],
+                temp_layers[group]['temperatures'][il]
                 ))
         ofs.write("\n")
     ofs.close()
+    print(" Output", outfile)
 
