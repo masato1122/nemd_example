@@ -32,9 +32,7 @@ After the calculations are finished, analyze results:
 sh analyze.sh
 ```
 
-# Author
+# Reference
 
-* Masato Ohnishi
-* The University of Tokyo
-* ohnishi@photon.t.u-tokyo.ac.jp
+* M. Ohnishi et al., Phys. Rev. B 95, 155405 (2017).
 

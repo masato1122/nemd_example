@@ -1,13 +1,19 @@
-nemd_dir=../../
-PYTHONPATH=$PYTHONPATH:${nemd_dir}
-tdir=${nemd_dir}/tools/
+nemd_dir=../../nemd_example
+PYTHONPATH=$PYTHONPATH:$nemd_dir
+tdir=$nemd_dir/tools
 
-python $tdir/plot_profile.py
-#exit
+for ical in 1 2; do
+    
+    python $tdir/plot_profile.py \
+        --figname  fig_profile${ical}.png \
+        --lmpinput nemd1.in \
+        --lmpdata  data.lammps \
+        --lmpdump  nemd${ical}.dump
 
-python $tdir/get_layer_temperature.py \
-    --lmpdata  data.lammps \
-    --lmpinput nemd2.in \
-    --lmpdump  nemd2.dump \
-    --outfile  temp_layer.txt
+    python $tdir/get_layer_temperature.py \
+        --lmpdata  data.lammps \
+        --lmpinput nemd1.in \
+        --lmpdump  nemd${ical}.dump \
+        --outfile  temp_layer${ical}.txt
+done
 

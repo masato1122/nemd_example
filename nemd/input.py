@@ -4,7 +4,9 @@ from nemd import (
         nemd_default_parameters, lj_parameters_C)
 
 def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
-        thot=310, tcold=290, time_npt=10., time_nemd=100., nloop=2, 
+        thot=310, tcold=290, 
+        time_npt=10., time_increase=100., time_nemd=100., 
+        nloop=2, 
         output_minimization=True,
         **kwargs):
     
@@ -14,6 +16,9 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
     ## modify default values
     for kw in kwargs.keys():
         parameters[kw] = kwargs[kw]
+    parameters['time_npt'] = time_npt
+    parameters['time_increase'] = time_increase
+    parameters['time_nemd'] = time_nemd
     parameters['thot'] = thot
     parameters['tcols'] = tcold
     if output_minimization is None:
@@ -29,7 +34,6 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
     parameters['read_data'] = datafile
     parameters['restart_file'] = 'restart0.nemd'
     parameters['dump_file'] = 'npt.dump'
-    parameters['md_time'] = time_npt
     write_nemd_input(atoms, index_nemd, type='npt', output='nemd0.in',
             parameters=parameters,
             lj_parameters=lj_parameters_C)
@@ -40,7 +44,6 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         parameters['read_data'] = parameters['restart_file']
         parameters['restart_file'] = 'restart%d.nemd'%(num)
         parameters['dump_file'] = 'nemd%d.dump'%(num)
-        parameters['md_time'] = time_nemd
         outfile = "nemd%d.in"%(num)
         write_nemd_input(atoms, index_nemd, type='nemd', output=outfile,
                 parameters=parameters,
@@ -68,13 +71,25 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     ofs.write("# ----- MD parameters -----\n")
     ofs.write("variable tstep   equal %f\n"%(parameters['time_step']))
     ofs.write("variable tdamp   equal %f\n"%(parameters['damping_time']))
-    ofs.write("variable MDTIME  equal %f\n"%(parameters['md_time']))
+    if type == 'npt':
+        md_time = parameters['time_npt']
+        md_time2 = parameters['time_increase']
+    else:
+        md_time = parameters['time_nemd']
+    ofs.write("variable MDTIME  equal %f\n"%(md_time))
     ofs.write("\n")
     ofs.write("variable NRUN      equal ${MDTIME}/${tstep}\n")
     ofs.write("variable THERSTEP  equal ${NRUN}/%d\n"%(
         int(parameters['ntotal_thermo'])))
     ofs.write("variable DUMPSTEP  equal ${NRUN}/%d\n"%(
         int(parameters['ntotal_dump'])))
+    
+    ## time for increasing temperature
+    if type == 'npt':
+        ofs.write("variable NRUN2     equal ${MDTIME2}/${tstep}\n")
+        ofs.write("variable DUMPSTEP2 equal ${NRUN2}/%d\n"%(
+            int(parameters['ntotal_dump'])))
+    
     ofs.write("variable TEMP      equal %.2f\n"%(taverage))
     ofs.write("\n")
     ofs.write("variable  kb   equal 1.3806488e-23\n")
@@ -139,6 +154,14 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
                 pdamp=parameters['pressure_damping'], 
                 outfile=parameters['dump_file']
                 )
+        
+        ofs.write("# --- 3. set temperature gradient\n")
+        _write_nemd_simulation(ofs, 
+                tinit=taverage,
+                tcold=parameters['tcold'], 
+                thot=parameters['thot'], 
+                outfile='nemd0.dump',
+                names={'dump':'DUMPSTEP2', 'nrun':'NRUN2'})
         
         ofs.write("#--- prepare fore NEMD simulation\n")
         ofs.write("reset_timestep 0\n")
@@ -210,7 +233,6 @@ def _write_groups(
     ofs.write("group free   union middle\n")
     ofs.write("\n")
 
-
 def _write_minimization(ofs, atoms, etol=1e-20, ftol=0.0001, 
         maxiter=50000, maxeval=50000, outfile='mini.dump'):
     """ Minimization is stoped by force tolerance with the default setting.
@@ -257,26 +279,34 @@ def _write_npt_simulation(ofs, outfile=None,
         ofs.write("undump    id2\n")
     ofs.write("\n")
 
-def _write_nemd_simulation(ofs, thot=310, tcold=290, outfile=None):
+def _write_nemd_simulation(ofs, thot=310, tcold=290, tinit=None, outfile=None,
+        names={'dump':'DUMPSTEP', 'nrun':'NRUN'}):
     
     ofs.write("fix frozen const setforce 0.0 0.0 0.0\n")
-    ofs.write("fix t1 hot  nvt temp %.2f %.2f ${tdamp}\n"%(thot, thot))
-    ofs.write("fix t2 cold nvt temp %.2f %.2f ${tdamp}\n"%(tcold, tcold))
+    if tinit is not None:
+        ofs.write("fix t1 hot  nvt temp %.2f %.2f ${tdamp}\n"%(tinit, thot))
+        ofs.write("fix t2 cold nvt temp %.2f %.2f ${tdamp}\n"%(tinit, tcold))
+    else:
+        ofs.write("fix t1 hot  nvt temp %.2f %.2f ${tdamp}\n"%(thot, thot))
+        ofs.write("fix t2 cold nvt temp %.2f %.2f ${tdamp}\n"%(tcold, tcold))
     ofs.write("fix m1 free nve\n")
     ofs.write("\n")
     ofs.write("variable     temp atom c_ke*${ee}/1.5/${kb}\n")
     ofs.write("variable     diff equal f_t2-f_t1\n")
     ofs.write("fix          tempave all ave/atom "\
-            "1 ${DUMPSTEP} ${DUMPSTEP} v_temp\n")
+            "1 ${%s} ${%s} v_temp\n"%(names['dump'], names['dump']))
     ofs.write("\n")
     ofs.write("thermo_style custom step pe temp f_t1 f_t2 v_diff\n")
     ofs.write("thermo       ${THERSTEP}\n")
     if outfile is not None:
-        ofs.write("dump         nemd all custom ${DUMPSTEP} %s "\
-                "id type x y z vx vy vz f_tempave\n"%(outfile))
+        #ofs.write("dump         nemd all custom ${DUMPSTEP} %s "\
+        #        "id type x y z vx vy vz f_tempave\n"%(outfile))
+        ofs.write("dump         nemd all custom ${%s} %s "\
+                "id type x y z f_tempave\n"%(names['dump'], outfile))
         ofs.write("dump_modify  nemd sort id\n") 
         ofs.write("dump_modify  nemd format float %13.8f \n") 
-    ofs.write("run          ${NRUN}\n")
+    
+    ofs.write("run          ${%s}\n"%(names['nrun']))
     if outfile is not None:
         ofs.write("undump     nemd\n")
     ofs.write("\n")

@@ -79,7 +79,8 @@ def main(options):
             datafile=datafile,
             time_npt=options.time_npt,
             time_nemd=options.time_nemd,
-            tcold=options.tcold, thot=options.thot)
+            tcold=options.tcold, thot=options.thot,
+            nloop=options.nloop)
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -89,6 +90,11 @@ if __name__ == '__main__':
             default=4, help="chiral number 1")
     parser.add_option("-m", dest="m", type="int",
             default=4, help="chiral number 2")
+    
+    # --- number of the NEMD loop
+    parser.add_option("--nloop", dest="nloop", type="int",
+            default=2, 
+            help="number of loops for NEMD calculations (default: 2)")
     
     # --- structure
     parser.add_option("--nthermo", dest="nthermo", type="int",

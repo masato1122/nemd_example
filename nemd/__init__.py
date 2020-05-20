@@ -13,7 +13,9 @@ nemd_default_parameters = {
         'thot': 310.,
         'ntotal_thermo': 100,
         'ntotal_dump': 10,
-        'md_time': None
+        'time_npt': None,
+        'time_increase': 10.0,
+        'time_nemd': None
         }
 
 lj_parameters_C = {

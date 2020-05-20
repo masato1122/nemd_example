@@ -10,7 +10,7 @@ python mk_graphite_nemd.py \
     --nthermo 4 --ncenter 20 \
     --thot 310 --tcold 290 \
     --time_npt $tnpt --time_nemd $tnemd \
-    --nloops
+    --nloop 2
 
 cdir=./out
 if [ ! -e $cdir ]; then
