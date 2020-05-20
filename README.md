@@ -16,7 +16,7 @@ PYTHONPATH=$PYTHONPATH:../nemd
 python mk_graphite_nemd.py -n 4 -m 3
 ```
 
-or
+To make LAMMPS input scripts and run jobs:
 
 ``` simple way
 cd ~/example
