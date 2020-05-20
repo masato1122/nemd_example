@@ -120,7 +120,9 @@ def read_group_ids(filename):
 
 def get_averaged_temperatures_atom(
         filename, natoms=None, nskip=9, label='f_tempave'):
-    """ Get averaged temperature from LAMMPS dump file
+    """ Get averaged temperature from LAMMPS dump file. Note that the first
+    data of temperature should be skipped.
+
     Return
     --------
     taverage : float, shape=(natoms)
@@ -129,7 +131,7 @@ def get_averaged_temperatures_atom(
             filename, natoms=natoms, nskip=nskip, label=label)
     taverage = np.zeros(natoms)
     for ia in range(natoms):
-        taverage[ia] = np.average(temperatures[:,ia])
+        taverage[ia] = np.average(temperatures[1:,ia])
     return taverage
 
 def read_temperatures_from_dump(

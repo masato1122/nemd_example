@@ -72,11 +72,10 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     ofs.write("variable tstep   equal %f\n"%(parameters['time_step']))
     ofs.write("variable tdamp   equal %f\n"%(parameters['damping_time']))
     if type == 'npt':
-        md_time = parameters['time_npt']
-        md_time2 = parameters['time_increase']
+        ofs.write("variable MDTIME  equal %f\n"%(parameters['time_npt']))
+        ofs.write("variable MDTIME2 equal %f\n"%(parameters['time_increase']))
     else:
-        md_time = parameters['time_nemd']
-    ofs.write("variable MDTIME  equal %f\n"%(md_time))
+        ofs.write("variable MDTIME  equal %f\n"%(parameters['time_nemd']))
     ofs.write("\n")
     ofs.write("variable NRUN      equal ${MDTIME}/${tstep}\n")
     ofs.write("variable THERSTEP  equal ${NRUN}/%d\n"%(
