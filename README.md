@@ -26,7 +26,7 @@ lmp_mpi < nemd0.in > nemd0.log
 lmp_mpi < nemd1.in > nemd1.log
 ```
 
-After the calculations are finished, analze results:
+After the calculations are finished, analyze results:
 
 ```
 sh analyze.sh
