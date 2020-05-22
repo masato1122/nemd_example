@@ -1,4 +1,5 @@
 PYTHONPATH=$PYTHONPATH:../
+export $PYTHONPATH
 
 ## for test
 tnpt=100; tnemd=300
@@ -12,7 +13,7 @@ python mk_graphite_nemd.py \
     --time_npt $tnpt --time_nemd $tnemd \
     --nloop 2
 
-cdir=./out
+cdir=./out2
 if [ ! -e $cdir ]; then
     mkdir $cdir
 fi
