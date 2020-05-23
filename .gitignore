@@ -1,5 +1,4 @@
 # ignored files
-*/.gitignore
 *.pyc
 */__pychache__
 

@@ -119,7 +119,8 @@ def read_group_ids(filename):
     return group_ids
 
 def get_averaged_temperatures_atom(
-        filename, natoms=None, nskip=9, label='f_tempave'):
+        filename, natoms=None, nskip=9, label='f_tempave',
+        idx_group=None, outfile=None):
     """ Get averaged temperature from LAMMPS dump file. Note that the first
     data of temperature should be skipped.
 
@@ -132,7 +133,11 @@ def get_averaged_temperatures_atom(
     taverage = np.zeros(natoms)
     for ia in range(natoms):
         taverage[ia] = np.average(temperatures[1:,ia])
-    return taverage
+    nstructures = len(temperatures) - 1
+    if idx_group is not None and outfile is not None:
+        write_averaged_temperatures_atom(outfile, taverage,
+                nstructures=nstructures, idx_group=idx_group)
+    return taverage, nstructures
 
 def read_temperatures_from_dump(
         filename, natoms=None, nskip=9, label='f_tempave'):
@@ -191,7 +196,7 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
     ids_group = read_group_ids(lmpinput)
     
     ## get averaged temperature of the atoms
-    tave_atom = get_averaged_temperatures_atom(
+    tave_atom, nstructures = get_averaged_temperatures_atom(
             filename, natoms=len(atoms), nskip=nskip, label=label)
     
     ## get atom index in each layer for 'group'
@@ -220,20 +225,25 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
         for il in range(nlayers):
             idx = ids_layers[group][il]
             zt_layers[group]['positions'][il] = \
-                    np.average(atoms.positions[idx,iaxis])
+                    np.average(atoms.positions[idx,iaxis]) * 0.1
             zt_layers[group]['temperatures'][il] = \
                     np.average(tave_atom[idx])
             zt_layers[group]['natoms'][il] = len(idx)
     
     ## outputfile
     if outfile is not None:
-        _write_temperatures_layer(outfile, zt_layers)
+        write_nemd_temperatures(outfile, zt_layers, nstructures=nstructures)
     
     return zt_layers
 
-def _write_temperatures_layer(outfile, temp_layers):
+def write_nemd_temperatures(outfile, temp_layers, 
+        unit_length='nm', nstructures=None):
+    """ Write temperature profile obtained with a NEMD simulation
+    """
     ofs = open(outfile, 'w')
-    ofs.write("# natoms position temperature\n")
+    if nstructures is not None:
+        ofs.write("# numbre of structures : %d\n"%(nstructures))
+    ofs.write("# natoms position[%s] temperature[K]\n"%(unit_length))
     for group in temp_layers.keys():
         ofs.write('## %s\n'%(group))
         nlayers = len(temp_layers[group]['natoms'])
@@ -246,4 +256,5 @@ def _write_temperatures_layer(outfile, temp_layers):
         ofs.write("\n")
     ofs.close()
     print(" Output", outfile)
+    
 

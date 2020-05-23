@@ -23,7 +23,8 @@ def _set_temperature_profile(fontsize=None, fig_width=None, aspect=None,
     return fig, ax
 
 def plot_temperature_profile_atom(
-        dumpfile, atoms=None, lmpinput='nemd.dump', figname=None,
+        dumpfile, atoms=None, lmpinput='nemd.dump', 
+        figname=None, outfile=None,
         plot_layer=True, thd_layer=1.0,
         groups4plot=['hot', 'middle', 'cold'], xunit='nm',
         dpi=300, fontsize=7, fig_width=3.3, aspect=0.9, lw=0.5, ms=7.0):
@@ -34,7 +35,8 @@ def plot_temperature_profile_atom(
     """
     ## Read temperatures
     from nemd.file import get_averaged_temperatures_atom
-    temp_ave = get_averaged_temperatures_atom(dumpfile, natoms=len(atoms))
+    temp_ave, nstructures = \
+            get_averaged_temperatures_atom(dumpfile, natoms=len(atoms))
      
     ## Read group IDs
     from nemd.file import read_group_ids
@@ -56,7 +58,7 @@ def plot_temperature_profile_atom(
         i0 = ids[group][0] - 1
         i1 = ids[group][1]
         ax.scatter(
-                atoms.positions[i0:i1,2]*xmod, 
+                atoms.positions[i0:i1,2] * xmod, 
                 temp_ave[i0:i1],
                 s=ms, marker='o', linewidth=lw,
                 edgecolor=colors[i], facecolor='None', label=group)
@@ -68,6 +70,23 @@ def plot_temperature_profile_atom(
     if figname is not None:
         fig.savefig(figname, dpi=dpi, bbox_inches='tight')
         print(" Output", figname)
+    
+    ## output text file
+    if outfile is not None:
+        from nemd.file import write_nemd_temperatures
+        
+        ## get data
+        temperatures = {}
+        for i, group in enumerate(ids):
+            i0 = ids[group][0] - 1
+            i1 = ids[group][1]
+            temperatures[group] = {}
+            temperatures[group]['natoms'] = np.ones(i1-i0)
+            temperatures[group]['positions'] = atoms.positions[i0:i1,2] * xmod
+            temperatures[group]['temperatures'] = temp_ave[i0:i1]
+        
+        ## output a file
+        write_nemd_temperatures(outfile, temperatures, unit_length=xunit,
+                nstructures=nstructures)
     return fig
-
 

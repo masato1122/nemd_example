@@ -16,7 +16,8 @@ def main(options):
     plot_temperature_profile_atom(
             options.lmpdump, atoms=atoms,
             lmpinput=options.lmpinput,
-            figname=options.figname
+            figname=options.figname,
+            outfile=options.outfile
             )
     
 if __name__ == '__main__':
@@ -24,6 +25,8 @@ if __name__ == '__main__':
     
     parser.add_option("--figname", dest="figname", type="string",
             default="fig_profile.png", help="figure name")
+    parser.add_option("--outfile", dest="outfile", type="string",
+            default="temperatures_atom.txt", help="output file name")
     
     parser.add_option("--lmpinput", dest="lmpinput", type="string",
             default='nemd.in', help="LAMMPS input script")
