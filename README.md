@@ -2,7 +2,7 @@
 
 Simple examples for non-equilibrium molecular dynamics (NEMD) simulation with LAMMPS package
 
-# Installation
+# Requirement
 
 python>=3.0, ase, pymatgen
 
