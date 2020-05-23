@@ -16,7 +16,7 @@ python mk_graphite_nemd.py \
     --time_nemd $tnemd \
     --nloop 2
 
-cdir=./out2
+cdir=./out
 if [ ! -e $cdir ]; then
     mkdir $cdir
 fi
