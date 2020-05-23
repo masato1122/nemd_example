@@ -78,6 +78,7 @@ def main(options):
             structure_nemd, index_nemd,
             datafile=datafile,
             time_npt=options.time_npt,
+            time_increase=options.time_increase,
             time_nemd=options.time_nemd,
             tcold=options.tcold, thot=options.thot,
             nloop=options.nloop)
@@ -112,6 +113,9 @@ if __name__ == '__main__':
     # --- MD time
     parser.add_option("--time_npt", dest="time_npt", type="float",
             default=10., help="NPT time (default: 10 ps)")
+    parser.add_option("--time_increase", dest="time_increase", type="float",
+            default=100., 
+            help="time for incrasing temperature (default: 100 ps)")
     parser.add_option("--time_nemd", dest="time_nemd", type="float",
             default=100., help="NEMD time (default: 100 ps)")
     
