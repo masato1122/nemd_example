@@ -1,8 +1,10 @@
 from distutils.core import setup
 
-packages_nemd_example = ['nemd_example',
-       'nemd_example.nemd'
-       ]
+packages_nemd_example = [
+        'nemd_example',
+        'nemd_example.nemd',
+        'nemd_example.tools'
+        ]
 
 setup(name='nemd_example',
       version='0.1',
