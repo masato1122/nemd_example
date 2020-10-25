@@ -15,6 +15,7 @@ def main(options):
     ## plot temperature profile
     plot_temperature_profile_atom(
             options.lmpdump, atoms=atoms,
+            iaxis=options.iaxis,
             lmpinput=options.lmpinput,
             figname=options.figname,
             outfile=options.outfile
@@ -34,6 +35,9 @@ if __name__ == '__main__':
             default='data.lammps', help="LAMMPS data file")
     parser.add_option("--lmpdump", dest="lmpdump", type="string",
             default='nemd.dump', help="dump file name")
+    
+    parser.add_option("--iaxis", dest="iaxis", type="int",
+            default=2, help="axial index (x:0, y:1, z:2)")
     
     (options, args) = parser.parse_args()
     #file_check(options.filename)

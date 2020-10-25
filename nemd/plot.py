@@ -23,7 +23,7 @@ def _set_temperature_profile(fontsize=None, fig_width=None, aspect=None,
     return fig, ax
 
 def plot_temperature_profile_atom(
-        dumpfile, atoms=None, lmpinput='nemd.dump', 
+        dumpfile, atoms=None, lmpinput='nemd.dump', iaxis=2,
         figname=None, outfile=None,
         plot_layer=True, thd_layer=1.0,
         groups4plot=['hot', 'middle', 'cold'], xunit='nm',
@@ -58,7 +58,7 @@ def plot_temperature_profile_atom(
         i0 = ids[group][0] - 1
         i1 = ids[group][1]
         ax.scatter(
-                atoms.positions[i0:i1,2] * xmod, 
+                atoms.positions[i0:i1,iaxis] * xmod, 
                 temp_ave[i0:i1],
                 s=ms, marker='o', linewidth=lw,
                 edgecolor=colors[i], facecolor='None', label=group)
@@ -82,7 +82,7 @@ def plot_temperature_profile_atom(
             i1 = ids[group][1]
             temperatures[group] = {}
             temperatures[group]['natoms'] = np.ones(i1-i0)
-            temperatures[group]['positions'] = atoms.positions[i0:i1,2] * xmod
+            temperatures[group]['positions'] = atoms.positions[i0:i1,iaxis]*xmod
             temperatures[group]['temperatures'] = temp_ave[i0:i1]
         
         ## output a file
