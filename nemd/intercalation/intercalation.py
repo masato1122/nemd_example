@@ -3,7 +3,6 @@ import numpy as np
 from optparse import OptionParser
 import pubchempy as pcp
 import ase, ase.io
-from ase.io.lammpsdata import write_lammps_data
 from ase.build.supercells import make_supercell
 
 ## pymatgen
@@ -14,12 +13,40 @@ import spglib
 API_KEY = "cp557Rqupmf1zuT2"
 mpr = MPRester(API_KEY)
 
-##
-def get_FeCl3_intercalated_graphite(ncells=[2,2,1], rectangular=True): 
+def get_FeCl3_intercalated_graphite(
+        nprim=[2,2,1], ncells=[1,1,1],
+        rectangular=True,
+        layer_distance=3.35, mol_distance=3.0): 
+    """
+    Parameters
+    --------------
+    nprim : array, shape=(3)
+        number of primitive unit cells of graphene along its translational
+        vectors
+    ncells : array, shape=(3)
+        number of unit cells
+    rectangular : bool
+        False returns the primitive unit cell of the intercalated structure,
+        while True returns the rectangular cell.
+    layer_distance : float
+        distance between graphene layers
+    mol_distance : float
+        distance between FeCl3-layer and graphene layer
+    """
     fecl3 = get_pubchem_structure(cid=24380)
-    intercalated = get_intercalated_graphite(ncells=ncells, molecule=fecl3)
+    intercalated = get_intercalated_graphite(
+            nprim=nprim, molecule=fecl3,
+            layer_distance=layer_distance, distance=mol_distance
+            )
     if rectangular:
         intercalated = get_rectangular_structure(intercalated)
+    
+    ## make a supercell
+    if ncells:
+        intercalated = make_supercell(
+                intercalated, 
+                [[ncells[0],0,0], [0,ncells[1],0], [0,0,ncells[2]]]
+                )
     return intercalated
 
 def get_pubchem_structure(cid=24380):
@@ -113,7 +140,7 @@ def _get_stacking_graphene(na=1, nb=1, nc=1, distance=3.35):
             cell=[sc.cell[0], sc.cell[1], sc.cell[2]*nc],
             pbc=[True,True,True]
             )
-    elements = ['C', 'Si']
+    elements = ['C', 'C']
     for iz in range(nc):
 
         ## displacment to form AB stacking
@@ -126,7 +153,8 @@ def _get_stacking_graphene(na=1, nb=1, nc=1, distance=3.35):
         for ia in range(len(sc)):
             graphite.append(ase.Atom(
                 symbol=elements[iz%2],
-                position=sc.positions[ia,:] + disp
+                position=sc.positions[ia,:] + disp,
+                tag=iz%2+1
                 ))
     ##
     graphite.wrap()
@@ -160,8 +188,8 @@ def _get_center_of_a_hexagon(graphene, ibase=0):
     return center_hex
 
 def get_intercalated_graphite(
-        ncells=[2,2,1], molecule=None, distance=3.0,
-        layer_distance=3.35):
+        nprim=[2,2,1], molecule=None, distance=3.0,
+        layer_distance=3.35, set_nemdtag=True):
     """
     Parameters
     -------------
@@ -170,10 +198,10 @@ def get_intercalated_graphite(
     """
     ## make a graphtie structure
     graphite = _get_stacking_graphene(
-            na=ncells[0], nb=ncells[1], nc=ncells[2], distance=layer_distance)
+            na=nprim[0], nb=nprim[1], nc=nprim[2], distance=layer_distance)
     
     ## center of a hexagonal lattice in the top layer
-    natoms_layer = int(len(graphite) / ncells[2])
+    natoms_layer = int(len(graphite) / nprim[2])
     center_hex = _get_center_of_a_hexagon(graphite[-natoms_layer:])
     
     ## get the center of the molecule
@@ -195,12 +223,16 @@ def get_intercalated_graphite(
                 )
     ## If the number of graphene layers is even, the position of the next layers
     ## should be adjusted.
-    if ncells[2]%2 == 0:
+    if nprim[2]%2 == 0:
         intercalate = _superpose_next_intercalated_layer(
                 intercalate, natoms_layer=natoms_layer)
 
     ##
     _set_element_center(intercalate, element="Fe")
+    
+    ## set tag for NEMD simulation
+    if set_nemdtag:
+        set_tags4nemd_structure(intercalate)
     return intercalate
 
 def _superpose_next_intercalated_layer(block, natoms_layer=None):
@@ -233,7 +265,7 @@ def _superpose_next_intercalated_layer(block, natoms_layer=None):
             ))
     return block2
 
-def get_rectangular_structure(atoms, eps=1e-7):
+def get_rectangular_structure(atoms, order_adjust=True, iax=2, eps=1e-7):
     
     #print(atoms.cell)
     P = [[1,1,0], [-1,1,0], [0,0,1]]
@@ -251,7 +283,17 @@ def get_rectangular_structure(atoms, eps=1e-7):
                 atoms_rec.cell[i1,i2] = 0.
     ##
     atoms_rec.wrap()
-    return atoms_rec
+
+    ##
+    if order_adjust:
+        zcoords = atoms_rec.positions[:,iax]
+        isort = np.argsort(zcoords)
+        atoms_new = ase.Atoms(cell=atoms_rec.cell)
+        for ia in range(len(atoms_rec)):
+            atoms_new.append(atoms_rec[isort[ia]])
+        return atoms_new
+    else:
+        return atoms_rec
 
 def _set_element_center(atoms, element='Fe'):
     """ Adjust position of the atoms
@@ -272,12 +314,63 @@ def _set_element_center(atoms, element='Fe'):
     disp = center_cell - center_Fe
     disp[2] = 0.
     atoms.translate(disp)
+    
+def _get_positions_of_layers(atoms, iax_out=2, tol=0.5):
+    """
+    Return
+    -----------
+    zlayers : array, float, shape=(number_of_layers)
+        z-position of the layers
+    """
+    idx_cs = [ia for ia, el in enumerate(atoms.get_chemical_symbols()) 
+            if el == "C"]
+    zall = atoms.get_positions()[:,iax_out]
+    isort = np.argsort(zall)
+    zlayers = []
+    zlayers.append(zall[isort[0]])
+    for i in range(1, len(isort)):
+        ia = isort[i]
+        if abs(zall[ia] - zlayers[-1]) > tol:
+            zlayers.append(zall[ia])
+    return zlayers
 
-
-atoms = get_FeCl3_intercalated_graphite(ncells=[2,2,1])
-ase.io.write("POSCAR", images=atoms, vasp5=True, direct=True)
-write_lammps_data('data.lammps', atoms)
-exit()
-
-
+def set_tags4nemd_structure(atoms, iax_out=2, tol=0.5):
+    """ Add tags to Atoms object.
+    Adjacent graphene layers and different molecules have different tags.
+    
+    Parameters
+    --------------
+    atoms : ase.Atoms object
+    iax_out : integer
+        axial index for the out-of-plane
+    tol : float
+        maximum thickness of layer
+        1 or 2 for carbon layers
+        >= 3 for other elements
+    """
+    ## get tags for each species
+    sym_all = atoms.get_chemical_symbols()
+    sym_list = sorted(set(sym_all), key=sym_all.index)
+    tags_elements = {}
+    itag_others = 3
+    for ii, el in enumerate(sym_list):
+        if el == "C":
+            tags_elements[el] = "12"
+        else:
+            tags_elements[el] = itag_others
+            itag_others += 1
+    
+    ## add tag for each layer
+    zlayers = _get_positions_of_layers(atoms, iax_out=iax_out, tol=tol)
+    count_carbon = 0
+    tags_all = np.zeros(len(atoms))
+    for ilayer, zlayer in enumerate(zlayers):
+        idx = np.where(abs(atoms.get_positions()[:,iax_out] - zlayer) < tol)[0]
+        if atoms[idx[0]].symbol == "C":
+            tags_all[idx] = count_carbon%2 + 1
+            count_carbon += 1
+        else:
+            for ia in idx:
+                tags_all[ia] = tags_elements[atoms[ia].symbol]
+    atoms.set_tags(tags_all)
 
