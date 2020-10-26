@@ -4,7 +4,7 @@ Simple examples for non-equilibrium molecular dynamics (NEMD) simulation with LA
 
 # Requirement
 
-python>=3.0, ase, pymatgen
+python>=3.0, ase, pymatgen, pubchempy
 
 # How to Use
 
