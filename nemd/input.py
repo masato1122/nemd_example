@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from nemd import (
-        nemd_default_parameters, lj_parameters_C)
+        nemd_default_parameters, lj_parameters)
 
 def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         thot=310, tcold=290, 
@@ -35,8 +35,7 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
     parameters['restart_file'] = 'restart0.nemd'
     parameters['dump_file'] = 'npt.dump'
     write_nemd_input(atoms, index_nemd, type='npt', output='nemd0.in',
-            parameters=parameters,
-            lj_parameters=lj_parameters_C)
+            parameters=parameters)
 
     ## NEMD
     for ical in range(nloop):
@@ -46,12 +45,10 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         parameters['dump_file'] = 'nemd%d.dump'%(num)
         outfile = "nemd%d.in"%(num)
         write_nemd_input(atoms, index_nemd, type='nemd', output=outfile,
-                parameters=parameters,
-                lj_parameters=lj_parameters_C)
+                parameters=parameters)
 
 def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
-        parameters=nemd_default_parameters,
-        lj_parameters=lj_parameters_C):
+        parameters=nemd_default_parameters):
     
     """ Make LAMMPS scripts for NEMD simulations
     atoms : Atoms object
@@ -63,6 +60,12 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     ## get the list of tags which denote the layer index
     tags_list = list(set(atoms.get_tags()))
     tags_list.sort()
+    
+    ## get species correspongind to the tags
+    species_corresp_tags = {}
+    for tag in tags_list:
+        idx = np.where(atoms.get_tags() == tag)[0][0]
+        species_corresp_tags[tag] = atoms[idx].symbol
     
     ## output
     ofs = open(output, 'w')
@@ -113,8 +116,10 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     
     """ This part should be modified for more complex materials.
     """
-    ofs.write("# ----- Define LJ potential -----\n")
-    _write_lj_potential_graphite(ofs, lj_parameters, nlayers=len(tags_list),
+    ofs.write("# ----- Define potentials -----\n")
+    #nlayers=len(tags_list),
+    _write_lj_potential_graphite(ofs, 
+            species=species_corresp_tags,
             potfile=parameters['potential_file'])
     
     ofs.write("# ---- Bin ----- \n")
@@ -179,27 +184,22 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     ofs.close()
     print(" Output", output)
 
-def _write_lj_potential_graphite(ofs, lj_params, nlayers=None,
+def _write_lj_potential_graphite(ofs, species=None,
         potfile='opt.tersoff'):
     """ Write LJ potential for graphite
-    lj_params : dictionary 
-        lj_params[key] : float
-        key = 'cutoff', 'epsilon', and 'sigma'
+    species : dictionary
+        species[tag] : string, element (tag = 1, 2, ...)
     """
-    
-    ## output LJ parameters
-    for key in lj_params.keys():
-        ofs.write("variable %8s equal %.7f\n"%(key, lj_params[key]))
-    ofs.write("\n")
+    nlayers = len(species)
     
     ## define potentials
-    ofs.write("pair_style hybrid lj/cut ${cutoff}")
-    for i in range(nlayers):
-        ofs.write(" tersoff")
-     
+    ofs.write("pair_style hybrid lj/cut 10.0 tersoff tersoff\n")
+    
     ## define interlayer potentials
     ofs.write("\n")
     for i in range(nlayers):
+        if species[i+1] != 'C':
+            continue
         ofs.write("pair_coeff * * tersoff %d %s"%(i+1, potfile))
         for j in range(nlayers):
             if i == j:
@@ -207,14 +207,48 @@ def _write_lj_potential_graphite(ofs, lj_params, nlayers=None,
             else:
                 ofs.write(" NULL")
         ofs.write("\n")
-    
-    ## define intralayer potentials
-    for i1 in range(nlayers-1):
-        for i2 in range(i1+1, nlayers):
-            ofs.write("pair_coeff %d %d lj/cut ${epsilon} ${sigma}\n"%(
-                i1+1, i2+1))
     ofs.write("\n")
     
+    ## define intralayer potentials
+    for i1 in range(nlayers):
+        el1 = species[i1+1]
+        for i2 in range(i1, nlayers):
+            el2 = species[i2+1]
+            if i1 == i2 and el1 == "C":
+                continue
+            ##
+            p1 = _get_lj_parameter_each(el1)
+            p2 = _get_lj_parameter_each(el2)
+            params = _get_combined_lj_parameter(p1, p2)
+            ofs.write("pair_coeff %d %d lj/cut %10.8f %8.5f %5.2f\n"%(
+                i1+1, i2+1, 
+                params['epsilon'], 
+                params['sigma'], 
+                params['cutoff']
+                ))
+    ofs.write("\n")
+
+def _get_lj_parameter_each(element):
+    if element == "Fe":
+        return lj_parameters['Fe3+']
+    elif element == "Cl":
+        return lj_parameters['Cl-']
+    elif element == "C":
+        return lj_parameters['C']
+    else:
+        print(" Error", element)
+        exit()
+
+def _get_combined_lj_parameter(p1, p2):
+    params = {}
+    key = 'cutoff'
+    params[key] = (p1[key] + p2[key]) * 0.5
+    key = 'sigma'
+    params[key] = (p1[key] + p2[key]) * 0.5
+    key = 'epsilon'
+    params[key] = np.sqrt(p1[key] * p2[key])
+    return params
+
 #
 def _write_groups(
         ofs, index, 

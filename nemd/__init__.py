@@ -18,9 +18,40 @@ nemd_default_parameters = {
         'time_nemd': None
         }
 
-lj_parameters_C = {
-        'cutoff': 12.00,
-        'epsilon': 0.00239,
-        'sigma': 3.4
+#lj_parameters_C = {
+#        'cutoff': 12.00,
+#        'epsilon': 0.00239,
+#        'sigma': 3.4
+#        }
+
+## S. Zhibo, et. al., RCS Adv., 2018, 8, 38706
+## Note that this paper does not give the cutoff parameters
+lj_parameters = {
+        "C":{
+            'cutoff': 12.00,       # Angstrom
+            'epsilon': 0.00239,    # eV
+            'sigma': 3.4           # Angstrom
+            },
+        "Fe3+":{
+            'cutoff': 10.0,
+            'epsilon': 0.02166,
+            'sigma': 1.91
+            },
+        "Fe2+":{
+            'cutoff': 10.0,
+            'epsilon': 0.02106,
+            'sigma': 1.91
+            },
+        "Cl-":{
+            'cutoff': 10.0,
+            'epsilon': 0.012889,
+            'sigma': 3.470
+            },
+        "O":{
+            'cutoff': 10.0,
+            'epsilon': 0.006502,
+            'sigma': 3.166 
+            }
         }
+
 

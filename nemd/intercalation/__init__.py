@@ -1,3 +1,5 @@
-from nemd.intercalation.intercalation import (
-        get_FeCl3_intercalated_graphite)
+from nemd.intercalation.gic import (
+        get_FeCl3_intercalated_graphite,
+        get_indices_at_layers
+        )
 
