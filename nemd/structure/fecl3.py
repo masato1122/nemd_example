@@ -29,11 +29,11 @@ def get_FeCl3_intercalated_graphite(
         number of unit cells
     """
     iax = 2
-    
+
     ## prepare FeCl3
     fecl3_std = get_FeCl3_structure(shape="standerdized")
     fecl3 = make_supercell(fecl3_std, [[2,0,0], [0,2,0], [0,0,1]])
-     
+    
     ## prepare graphene
     graphene = get_stacking_graphene(na=5, nb=5, nc=nglayers, distance=tgra)
     
