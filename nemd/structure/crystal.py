@@ -105,7 +105,12 @@ def _make_new_atoms(cell, scaled_positions, numbers, pbc=True, center=True):
         symbols.append(ase.data.chemical_symbols[num])
 
     # --- make the primitive cell
-    atoms_new = ase.Atoms(symbols, np.dot(scaled_positions, cell), cell=cell)
+    atoms_new = ase.Atoms(
+            symbols, 
+            np.dot(scaled_positions, cell), 
+            cell=cell,
+            pbc=[True, True, True]
+            )
     if pbc:
         atoms_new.pbc = pbc
     if center:

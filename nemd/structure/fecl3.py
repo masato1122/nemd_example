@@ -6,20 +6,29 @@ import ase
 import ase.io
 from ase.build import make_supercell
 import spglib
-from nemd.structure.gic import get_indices_at_layers
+from nemd.structure.gic import (
+        get_indices_at_layers,
+        get_ordered_structure,
+        set_tags4md_structure
+        )
 from nemd.structure.crystal import (
         get_standerdized_cell,
-        get_stacking_graphene)
+        get_stacking_graphene
+        )
 
 def get_FeCl3_intercalated_graphite(
-        nglayers=3, rectangular=True, distance=3.0, tgra=3.35):
+        nglayers=3, rectangular=True, distance=3.0, tgra=3.35,
+        ncells=[1,1,1]):
     """ Create FeCl3-intercalated graphite
     nglayers :
         number of graphene layers
     distance : unit=[A]
         space between a graphene layer and the top or bottom of FeCl3 layer
         Note that FeCl3 layer is not 2D, but qusi-3D.
+    ncells : array, shape=(3)
+        number of unit cells
     """
+    iax = 2
     
     ## prepare FeCl3
     fecl3_std = get_FeCl3_structure(shape="standerdized")
@@ -29,14 +38,16 @@ def get_FeCl3_intercalated_graphite(
     graphene = get_stacking_graphene(na=5, nb=5, nc=nglayers, distance=tgra)
     
     ## set axis
-    _rotate_in_2D(fecl3)
-    _rotate_in_2D(graphene)
+    _rotate_in_2D(fecl3, a0=[1,0])
+    _rotate_in_2D(graphene, a0=[1,0])
     
     ## apply strain to match two cells
     Lgra = np.linalg.norm(graphene.cell[0])
     Lfecl3 = np.linalg.norm(fecl3.cell[0])
     strain = Lgra / Lfecl3 - 1.0
-    print(" Mismatch : %.2f%%"%(strain*100.))
+    print("")
+    print(" Lattice mismatch bewteen graphene and FeCl3 : %.2f%%"%(strain*100.))
+    print("")
     Lnew = (Lgra + Lfecl3) * 0.5
     _apply_hydro_strain(fecl3, (Lnew - Lfecl3)/Lfecl3)
     _apply_hydro_strain(graphene, (Lnew - Lgra)/Lgra)
@@ -45,11 +56,19 @@ def get_FeCl3_intercalated_graphite(
     gic = _get_superposed_structure(
             graphene, fecl3, distance=distance, tgra=tgra)
     
+    ## get a rectangular unit
     if rectangular:
-        print("AAAAAAAAAAAAAAAAAAAAA rectangular")
-        exit()
-    else:
-        return gic
+        gic = make_supercell(gic, [[1,0,0], [1,2,0], [0,0,1]])
+    
+    ## make a supercell
+    gic = make_supercell(gic, 
+            [[ncells[0],0,0], [0,ncells[1],0], [0,0,ncells[2]]])
+    gic = get_ordered_structure(gic, iax=iax)
+    gic.wrap()
+    
+    ##
+    set_tags4md_structure(gic, iax_out=iax, gap=2.0)
+    return gic
 
 def _get_superposed_structure(
         gra, mol, distance=3.0, tgra=3.35, iax=2, tol=1e-5):
@@ -75,7 +94,7 @@ def _get_superposed_structure(
     gra.cell[iax,iax] = zheight
     
     ## superpose
-    gic = ase.Atoms(cell=gra.cell)
+    gic = ase.Atoms(cell=gra.cell, pbc=[True, True, True])
     for atom in gra:
         gic.append(atom)
     for atom in mol:
@@ -124,7 +143,7 @@ def get_FeCl3_primitive():
             [7.3804925  ,  1.85823915,  2.18545206]])
     symbols = ['Fe', 'Fe', 'Cl', 'Cl', 'Cl', 'Cl', 'Cl', 'Cl']
     
-    atoms_prim = ase.Atoms(cell=cell)
+    atoms_prim = ase.Atoms(cell=cell, pbc=[True, True, True])
     for ia, el in enumerate(symbols):
         atoms_prim.append(ase.Atom(el, positions[ia]))
     return atoms_prim
@@ -164,15 +183,15 @@ def get_FeCl3_structure(shape="standerdized", layer=True):
         else:
             return atoms_rec
 
-def _extract_layer(atoms, ilayer=1, tol=3.0):
+def _extract_layer(atoms, ilayer=1, gap=2.0):
     """
     Parameters
     -------------
     ilayer : integer
         index of layers (0, 1, ...)
     """
-    zlayers, idx_layers = get_indices_at_layers(atoms, tol=3.0)
-    layer = ase.Atoms(cell=atoms.cell)
+    zlayers, idx_layers = get_indices_at_layers(atoms, gap=gap)
+    layer = ase.Atoms(cell=atoms.cell, pbc=[True, True, True])
     for ia in idx_layers[ilayer]:
         layer.append(atoms[ia])
     return layer

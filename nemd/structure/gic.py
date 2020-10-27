@@ -124,7 +124,7 @@ def get_gic_structure(
     
     ## set tag for NEMD simulation
     if set_nemdtag:
-        set_tags4nemd_structure(intercalate)
+        set_tags4md_structure(intercalate)
     return intercalate
 
 def _superpose_next_intercalated_layer(block, natoms_layer=None):
@@ -187,7 +187,7 @@ def get_ordered_structure(atoms, iax=2):
     
     zcoords = atoms.get_positions()[:,iax]
     isort = np.argsort(zcoords)
-    atoms_new = ase.Atoms(cell=atoms.cell)
+    atoms_new = ase.Atoms(cell=atoms.cell, pbc=[True, True, True])
     for ia in range(len(atoms)):
         atoms_new.append(atoms[isort[ia]])
     return atoms_new
@@ -212,38 +212,21 @@ def _set_element_center(atoms, element='Fe'):
     disp[2] = 0.
     atoms.translate(disp)
     
-def _get_positions_of_layers(atoms, iax_out=2, tol=0.5):
-    """
-    Return
-    -----------
-    zlayers : array, float, shape=(number_of_layers)
-        z-position of the layers
-    """
-    idx_cs = [ia for ia, el in enumerate(atoms.get_chemical_symbols()) 
-            if el == "C"]
-    zall = atoms.get_positions()[:,iax_out]
-    isort = np.argsort(zall)
-    zlayers = []
-    zlayers.append(zall[isort[0]])
-    for i in range(1, len(isort)):
-        ia = isort[i]
-        if abs(zall[ia] - zlayers[-1]) > tol:
-            zlayers.append(zall[ia])
-    return zlayers
-
-def set_tags4nemd_structure(atoms, iax_out=2, tol=0.5):
+def set_tags4md_structure(atoms, iax_out=2, gap=1.0):
     """ Add tags to Atoms object.
     Adjacent graphene layers and different molecules have different tags.
+    
+    tag :
+        1 or 2 for carbon layers
+        >= 3 for other elements
     
     Parameters
     --------------
     atoms : ase.Atoms object
     iax_out : integer
         axial index for the out-of-plane
-    tol : float
-        maximum thickness of layer
-        1 or 2 for carbon layers
-        >= 3 for other elements
+    gap : float
+        distance to judge the gap of layers    
     """
     ## get tags for each species
     sym_all = atoms.get_chemical_symbols()
@@ -258,7 +241,7 @@ def set_tags4nemd_structure(atoms, iax_out=2, tol=0.5):
             itag_others += 1
     
     ## add tag for each layer
-    zlayers, idx_layers = get_indices_at_layers(atoms, iax_out=iax_out, tol=tol)
+    zlayers, idx_layers = get_indices_at_layers(atoms, iax_out=iax_out, gap=gap)
     
     tags_all = np.zeros(len(atoms))
     count_carbon = 0
@@ -272,26 +255,42 @@ def set_tags4nemd_structure(atoms, iax_out=2, tol=0.5):
     
     atoms.set_tags(tags_all)
 
-def get_indices_at_layers(atoms, iax_out=2, tol=0.5):
+def get_indices_at_layers(atoms, iax_out=2, gap=1.0):
     """
-    Return 
-    ------------
-    zlayers : array, float
-        position of the layer
-    idx_layers : array, integer
-        atom indices at the layers
+    Return
+    -----------
+    zlayers : array, float, shape=(number_of_layers)
+        averaged z-position of the atoms in each layer
+    idx_layers : array
+        idx_layers[il] : 
+            atomic indices at the il-th layer
     """
-    zlayers_tmp = _get_positions_of_layers(atoms, iax_out=iax_out, tol=tol)
-    nlayers = len(zlayers_tmp)
+    zall = atoms.get_positions()[:,iax_out]
+    isort = np.argsort(zall)
+
+    ## initial set
+    zbase = zall[isort[0]]
     idx_layers = []
-    for ilayer, zlayer in enumerate(zlayers_tmp):
-        idx = np.where(abs(atoms.positions[:,iax_out] - zlayer) < tol)[0]
-        idx_layers.append(np.sort(idx))
-    ##
+    idx_layers.append([])
+    idx_layers[-1].append(isort[0])
+    
+    ## analyze for all
+    for i in range(1, len(isort)):
+        ia = isort[i]
+        if abs(zall[ia] - zbase) > gap:
+            zbase = zall[ia]
+            idx_layers.append([])
+        else:
+            zbase = max(zbase, zall[ia])
+        ##
+        idx_layers[-1].append(ia)
+    
+    ## averaged positions of the layers
+    nlayers = len(idx_layers)
     zlayers = np.zeros(nlayers)
     for il in range(nlayers):
-        zlayers[il] = np.average(atoms.positions[idx_layers[il],iax_out])
-
+        zlayers[il] = np.average(zall[idx_layers[il]])
+    ##
     return zlayers, idx_layers
 
 

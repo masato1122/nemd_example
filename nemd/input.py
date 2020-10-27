@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from nemd import (
-        nemd_default_parameters, lj_parameters)
+from nemd.default import nemd_default_parameters, lj_parameters
 
 def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         thot=310, tcold=290, 
