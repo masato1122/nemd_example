@@ -10,10 +10,12 @@ from pymatgen import MPRester
 from pymatgen.symmetry.bandstructure import HighSymmKpath
 import spglib
 
-#API_KEY = "cp557Rqupmf1zuT2"
-#mpr = MPRester(API_KEY)
+from nemd.structure.crystal import (
+        get_pubchem_structure, 
+        get_graphene_structure,
+        get_stacking_graphene)
 
-def get_FeCl3_intercalated_graphite(
+def get_FeCl3mols_intercalated_graphite(
         nprim=[2,2,1], ncells=[1,1,1],
         rectangular=True, iaxial=2,
         layer_distance=3.35, mol_distance=3.0): 
@@ -49,117 +51,6 @@ def get_FeCl3_intercalated_graphite(
                 )
     atoms_new = get_ordered_structure(intercalated, iax=iaxial)
     return atoms_new
-
-def get_pubchem_structure(cid=24380):
-    """
-    Parameter
-    -------------
-    cid : integer
-        PubChem ID
-    
-    Return
-    ----------
-    mol : Atoms object
-    """
-    c = pcp.Compound.from_cid(cid)
-    mol = ase.Atoms()
-    natoms = len(c.elements)
-    mol.number_of_atoms = len(c.elements)
-    for ia in range(natoms):
-        el = c.elements[ia]
-        coord = np.zeros(3)
-        coord[0] = c.record['coords'][0]['conformers'][0]['x'][ia]
-        coord[1] = c.record['coords'][0]['conformers'][0]['y'][ia]
-        if c.coordinate_type.lower() == "2d":
-            coord[2] = 0.
-        else:
-            coord[2] = c.record['coords'][0]['conformers'][0]['z'][ia]
-        mol.append(
-                ase.Atom(symbol=el, position=coord)
-                )
-    mol.wrap()
-    return mol
-
-def get_graphene_structure(layer="A", acc=1.42, distance=3.35):
-    """ Create ase.Atoms object for graphene
-    """
-    cell = np.array(
-            [
-                [acc*0.5*np.sqrt(3), -acc*1.5, 0.0],
-                [acc*0.5*np.sqrt(3), acc*1.5, 0.0],
-                [0.0, 0.0, distance]
-                ]
-            )
-    atoms = ase.Atoms(cell=cell, pbc=[True,True,True])
-    scaled_positions = np.array([[1./3., 2./3., 0.5], [2./3., 1./3., 0.5]])
-    positions = np.dot(scaled_positions, cell)
-    atoms.append(ase.Atom(symbol="C", position=positions[0]))
-    atoms.append(ase.Atom(symbol="C", position=positions[1]))
-    atoms.wrap()
-    return atoms
-
-#def get_graphite_structure(
-#        material_id="mp-169", 
-#        conventional=True
-#        ):
-#    """
-#    Return
-#    ----------
-#    atoms : ase.Atoms object
-#        graphite structure
-#    """
-#    ## get primitive cell of graphite (pymatgen.Structure object)
-#    structure = mpr.get_structure_by_material_id(material_id)
-#    if conventional:
-#        from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-#        sga = SpacegroupAnalyzer(structure)
-#        structure = sga.get_conventional_standard_structure()
-#        
-#    ## convert pymatgen.Structure to ase.Atoms
-#    atoms = ase.Atoms(cell=structure.lattice.matrix)
-#    for ia in range(len(structure)):
-#        atoms.append(
-#                ase.Atom(
-#                    symbol=str(structure.species[ia]),
-#                    position=structure.cart_coords[ia]
-#                    )
-#                )
-#    atoms.wrap()
-#    return atoms
-
-def _get_stacking_graphene(na=1, nb=1, nc=1, distance=3.35):
-    """ Get ase.Atoms object for an AB stacking graphite
-    """
-    graphene = get_graphene_structure(distance=distance)
-    
-    ## make a supercell along x and y directions
-    sc = make_supercell(graphene, [[na,0,0], [0,nb,0], [0,0,1]])
-    natoms_layer = len(sc)
-    
-    ## make a supercell along z direction
-    graphite = ase.Atoms(
-            cell=[sc.cell[0], sc.cell[1], sc.cell[2]*nc],
-            pbc=[True,True,True]
-            )
-    elements = ['C', 'C']
-    for iz in range(nc):
-
-        ## displacment to form AB stacking
-        disp = np.zeros(3)
-        if iz %2 == 1:
-            disp += (graphene.cell[0,:] + graphene.cell[1,:] * 2.) * 2./3.
-        disp += sc.cell[2,:] * iz
-        
-        ## add atoms at the layer
-        for ia in range(len(sc)):
-            graphite.append(ase.Atom(
-                symbol=elements[iz%2],
-                position=sc.positions[ia,:] + disp,
-                tag=iz%2+1
-                ))
-    ##
-    graphite.wrap()
-    return graphite
 
 def _get_center_of_a_hexagon(graphene, ibase=0):
     """ Get the center position of a hexagonal lattice in a graphene layer
@@ -198,7 +89,7 @@ def get_gic_structure(
         distance between the molecule and graphite layer
     """
     ## make a graphtie structure
-    graphite = _get_stacking_graphene(
+    graphite = get_stacking_graphene(
             na=nprim[0], nb=nprim[1], nc=nprim[2], distance=layer_distance)
     
     ## center of a hexagonal lattice in the top layer
@@ -390,11 +281,17 @@ def get_indices_at_layers(atoms, iax_out=2, tol=0.5):
     idx_layers : array, integer
         atom indices at the layers
     """
-    zlayers = _get_positions_of_layers(atoms, iax_out=iax_out, tol=tol)
+    zlayers_tmp = _get_positions_of_layers(atoms, iax_out=iax_out, tol=tol)
+    nlayers = len(zlayers_tmp)
     idx_layers = []
-    for ilayer, zlayer in enumerate(zlayers):
+    for ilayer, zlayer in enumerate(zlayers_tmp):
         idx = np.where(abs(atoms.positions[:,iax_out] - zlayer) < tol)[0]
         idx_layers.append(np.sort(idx))
+    ##
+    zlayers = np.zeros(nlayers)
+    for il in range(nlayers):
+        zlayers[il] = np.average(atoms.positions[idx_layers[il],iax_out])
+
     return zlayers, idx_layers
 
 
