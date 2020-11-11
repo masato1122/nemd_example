@@ -13,7 +13,7 @@ def _check_rectangular(cell, symprec=1e-5):
             return None
     return 0
 
-def write_lammps_data(filename, images=None):
+def write_lammps_data(filename, images=None, charge=False):
     """ Make a LAMMPS data file 
     filename : string
         output file name of the LAMMPS data file
@@ -63,7 +63,9 @@ def write_lammps_data(filename, images=None):
     ofs.write("Atoms\n")
     ofs.write("\n")
     for ia, atom in enumerate(images):
-        ofs.write("%d  %d  "%(ia+1, atom.tag))
+        ofs.write("%d  %d"%(ia+1, atom.tag))
+        if charge:
+            ofs.write(" %7.3f"%(images.get_initial_charges()[ia]))
         for j in range(3):
             ofs.write(" %15.10f" % (atom.position[j]))
         ofs.write("\n")

@@ -6,7 +6,8 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         thot=310, tcold=290, 
         time_npt=10., time_increase=100., time_nemd=100., 
         nloop=2, 
-        output_minimization=True,
+        output_minimization=True, 
+        charge=False, pppm=1e-5,
         **kwargs):
     
     import copy
@@ -34,7 +35,7 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
     parameters['restart_file'] = 'restart0.nemd'
     parameters['dump_file'] = 'npt.dump'
     write_nemd_input(atoms, index_nemd, type='npt', output='nemd0.in',
-            parameters=parameters)
+            parameters=parameters, charge=charge, pppm=pppm)
 
     ## NEMD
     for ical in range(nloop):
@@ -44,10 +45,10 @@ def write_nemd_inputs(atoms, index_nemd, datafile='data.lammps',
         parameters['dump_file'] = 'nemd%d.dump'%(num)
         outfile = "nemd%d.in"%(num)
         write_nemd_input(atoms, index_nemd, type='nemd', output=outfile,
-                parameters=parameters)
+                parameters=parameters, charge=charge, pppm=pppm)
 
 def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
-        parameters=nemd_default_parameters):
+        parameters=nemd_default_parameters, charge=False, pppm=1e-5):
     
     """ Make LAMMPS scripts for NEMD simulations
     atoms : Atoms object
@@ -98,7 +99,10 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     ofs.write("\n")
     ofs.write("# ----- Initialize simulation -----\n")
     ofs.write("units         metal\n")
-    ofs.write("atom_style    atomic\n")
+    if charge == False:
+        ofs.write("atom_style    atomic\n")
+    else:
+        ofs.write("atom_style    charge\n")
     ofs.write("dimension     3\n")
     ofs.write("boundary      p p p\n")
     ofs.write("atom_modify   map array\n")
@@ -119,7 +123,9 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     #nlayers=len(tags_list),
     _write_lj_potential_graphite(ofs, 
             species=species_corresp_tags,
-            potfile=parameters['potential_file'])
+            potfile=parameters['potential_file'],
+            charge=charge, pppm=pppm
+            )
     
     ofs.write("# ---- Bin ----- \n")
     ofs.write("neighbor      0.3 bin\n")
@@ -184,15 +190,22 @@ def write_nemd_input(atoms, index_nemd, type='npt', output='nemd.in',
     print(" Output", output)
 
 def _write_lj_potential_graphite(ofs, species=None,
-        potfile='opt.tersoff'):
+        potfile='opt.tersoff', 
+        charge=False, pppm=1e-5
+        ):
     """ Write LJ potential for graphite
     species : dictionary
         species[tag] : string, element (tag = 1, 2, ...)
     """
     nlayers = len(species)
     
+    if charge:
+        lj_line = "lj/cut/coul/long"
+    else:
+        lj_line = "lj/cut"
+
     ## define potentials
-    ofs.write("pair_style hybrid lj/cut 10.0 tersoff tersoff\n")
+    ofs.write("pair_style hybrid %s 10.0 tersoff tersoff\n"%(lj_line))
     
     ## define interlayer potentials
     ofs.write("\n")
@@ -219,13 +232,17 @@ def _write_lj_potential_graphite(ofs, species=None,
             p1 = _get_lj_parameter_each(el1)
             p2 = _get_lj_parameter_each(el2)
             params = _get_combined_lj_parameter(p1, p2)
-            ofs.write("pair_coeff %d %d lj/cut %10.8f %8.5f %5.2f\n"%(
-                i1+1, i2+1, 
+            ofs.write("pair_coeff %d %d %s %10.8f %8.5f %5.2f\n"%(
+                i1+1, i2+1, lj_line,
                 params['epsilon'], 
                 params['sigma'], 
                 params['cutoff']
                 ))
     ofs.write("\n")
+    
+    if charge:
+        ofs.write("kspace_style pppm %.2e\n"%(pppm))
+        ofs.write("\n")
 
 def _get_lj_parameter_each(element):
     if element == "Fe":
