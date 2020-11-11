@@ -50,6 +50,7 @@ def get_FeCl3mols_intercalated_graphite(
                 [[ncells[0],0,0], [0,ncells[1],0], [0,0,ncells[2]]]
                 )
     atoms_new = get_ordered_structure(intercalated, iax=iaxial)
+    
     return atoms_new
 
 def _get_center_of_a_hexagon(graphene, ibase=0):

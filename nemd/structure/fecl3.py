@@ -16,6 +16,26 @@ from nemd.structure.crystal import (
         get_stacking_graphene
         )
 
+def _set_fecl3_charges(images, 
+        initial_charges={'Fe':1.17, 'Cl':-0.8866667}):
+    
+    symbols = images.get_chemical_symbols()
+    symbol_list = set(list(symbols))
+    charges = np.zeros(len(symbols))
+    for sym_each in initial_charges.keys():
+        idx = [i for i, el in enumerate(symbols) if el == sym_each]
+        charges[idx] = initial_charges[sym_each]
+    
+    ## charges on carbon atoms
+    idx = [i for i, el in enumerate(symbols) if el == 'C']
+    ncarbons = len(idx)
+    if ncarbons != 0:
+        ecarbon = np.sum(charges) / ncarbons
+        charges[idx] = ecarbon
+    
+    ## set charges
+    images.set_initial_charges(charges)
+    
 def get_FeCl3_intercalated_graphite(
         nglayers=3, rectangular=True, distance=3.0, tgra=3.35,
         ncells=[1,1,1]):
@@ -65,6 +85,9 @@ def get_FeCl3_intercalated_graphite(
             [[ncells[0],0,0], [0,ncells[1],0], [0,0,ncells[2]]])
     gic = get_ordered_structure(gic, iax=iax)
     gic.wrap()
+    
+    ## set charges
+    _set_fecl3_charges(gic)
     
     ##
     set_tags4md_structure(gic, iax_out=iax, gap=2.0)
@@ -126,7 +149,7 @@ def _rotate_in_2D(atoms, a0=[1,0]):
         exit()
     atoms.wrap()
 
-def get_FeCl3_primitive():    
+def get_FeCl3_primitive():
     cell = np.array([
             [6.635793, -2.965941, 0.0], 
             [6.635793, 2.965941, 0.0], 
@@ -143,14 +166,19 @@ def get_FeCl3_primitive():
             [7.3804925  ,  1.85823915,  2.18545206]])
     symbols = ['Fe', 'Fe', 'Cl', 'Cl', 'Cl', 'Cl', 'Cl', 'Cl']
     
+    ##
     atoms_prim = ase.Atoms(cell=cell, pbc=[True, True, True])
     for ia, el in enumerate(symbols):
         atoms_prim.append(ase.Atom(el, positions[ia]))
+    
+    ## set charges
+    _set_fecl3_charges(atoms_prim)
+    
     return atoms_prim
 
 def get_FeCl3_structure(shape="standerdized", layer=True):
     """
-    Parameters
+    cParameters
     ------------
     shape : string
         primitive, standerdized, layer, rectangular
