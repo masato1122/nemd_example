@@ -189,8 +189,7 @@ def get_ordered_structure(atoms, iax=2):
     zcoords = atoms.get_positions()[:,iax]
     isort = np.argsort(zcoords)
     atoms_new = ase.Atoms(cell=atoms.cell, pbc=[True, True, True])
-    for ia in range(len(atoms)):
-        atoms_new.append(atoms[isort[ia]])
+    atoms_new = atoms[isort]
     return atoms_new
 
 def _set_element_center(atoms, element='Fe'):
@@ -256,7 +255,7 @@ def set_tags4md_structure(atoms, iax_out=2, gap=1.0):
     
     atoms.set_tags(tags_all)
 
-def get_indices_at_layers(atoms, iax_out=2, gap=1.0):
+def get_indices_at_layers(atoms, iax_out=2, gap=1.5):
     """
     Return
     -----------
@@ -267,8 +266,11 @@ def get_indices_at_layers(atoms, iax_out=2, gap=1.0):
             atomic indices at the il-th layer
     """
     zall = atoms.get_positions()[:,iax_out]
-    isort = np.argsort(zall)
+    return get_layer_information(zall, gap=gap)
 
+def get_layer_information(zall, gap=1.5):
+    isort = np.argsort(zall)
+    
     ## initial set
     zbase = zall[isort[0]]
     idx_layers = []
@@ -293,5 +295,4 @@ def get_indices_at_layers(atoms, iax_out=2, gap=1.0):
         zlayers[il] = np.average(zall[idx_layers[il]])
     ##
     return zlayers, idx_layers
-
 

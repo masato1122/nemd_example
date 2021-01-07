@@ -77,9 +77,11 @@ def check_nemd_structure(atoms, index, filename='nemd.xyz'):
     Parameters
     ------------
     atoms : Atoms object of NEMD simulation
-    index : dictionary of integer array
+    index : dictionary of integer array or dictionary of list of integer array
         index[name] : range of atomic index at the 'name' region
         name : 'left', 'center', or 'right'
+        #
+        "index[name][0][0]:index[name][0][1]+1"
     """
     atoms_out = atoms.copy()
 
@@ -89,8 +91,17 @@ def check_nemd_structure(atoms, index, filename='nemd.xyz'):
         print('Error')
         exit()
     for j, name in enumerate(index.keys()):
-        for ia in range(index[name][0], index[name][1]+1):
-            atoms_out[ia].symbol = symbols[j]
+        if type(index[name][0]) is int:
+            for ia in range(index[name][0], index[name][1]+1):
+                atoms_out[ia].symbol = symbols[j]
+        elif type(index[name][0]) is list:
+            for idx_each in index[name]:
+                for ia in range(idx_each[0], idx_each[1]+1):
+                    atoms_out[ia].symbol = symbols[j]
+        else:
+            print(" Error in group")
+            print(index[name], type(index[name][0]))
+            exit()
 
     ## output file: allowed format are 'POSCAR' or 'xyz'
     if filename == 'POSCAR':
@@ -181,22 +192,26 @@ def read_temperatures_from_dump(
     return temperatures
 
 def get_averaged_temperatures_layer(filename, lmpinput=None, 
-        atoms=None, nskip=9, label='f_tempave', iaxis=2, outfile=None):
+        atoms=None, nskip=9, label='f_tempave', iaxis=2, outfile=None, gap=1.5):
     """ Atoms in 'atoms' object should be ordered along z-axis.
     atoms[i].number denotes the layer.
+    
+    Parameters
+    --------------
+    outfile : string
+        output file name. If it is given, averaged positions and temperatures of
+        the layers will be written.
 
     Return
     ---------
     zt_layers : dict of dict of narray
         zt_layers[group][keyword] : shape=(nlayers)
         keyword : 'positions', 'temperatures', or 'natoms'
-    outfile : string
-        output file name. If it is given, averaged positions and temperatures of
-        the layers will be written.
     """
+    from nemd.structure import get_indices_at_layers
     
     ids_group = read_group_ids(lmpinput)
-    
+
     ## get averaged temperature of the atoms
     tave_atom, nstructures = get_averaged_temperatures_atom(
             filename, natoms=len(atoms), nskip=nskip, label=label)
@@ -204,56 +219,61 @@ def get_averaged_temperatures_layer(filename, lmpinput=None,
     ## get atom index in each layer for 'group'
     ids_layers = {}
     for group in ids_group.keys():
-        
+         
         ia0 = ids_group[group][0] - 1
         ia1 = ids_group[group][1]
         
+        z_tmp, idx_tmp = get_indices_at_layers(
+                atoms[ia0:ia1], iax_out=iaxis, gap=gap)
+        
+        ##
         ids_layers[group] = []
-        ids_layers[group].append([])
-        ids_layers[group][-1].append(ia0)
-        for ia in range(ia0+1, ia1):
-            if atoms[ia].number != atoms[ia-1].number:
-                ids_layers[group].append([])
-            ids_layers[group][-1].append(ia)
-    
+        for il, ids in enumerate(idx_tmp):
+            ids_layers[group].append([])
+            for iatom in ids:
+                ids_layers[group][il].append(iatom+ia0)
+        
     ## get the averaged positions and temperatures in the layers
     zt_layers = {}
     keys = ['natoms', 'positions', 'temperatures']
     for group in ids_group.keys():
         nlayers = len(ids_layers[group])
-        zt_layers[group] = {}
-        for kw in keys:
-            zt_layers[group][kw] = np.zeros(nlayers)
+        zt_layers[group] = np.zeros((nlayers,3))
         for il in range(nlayers):
             idx = ids_layers[group][il]
-            zt_layers[group]['positions'][il] = \
+            zt_layers[group][il,0] = len(idx)
+            zt_layers[group][il,1] = \
                     np.average(atoms.positions[idx,iaxis]) * 0.1
-            zt_layers[group]['temperatures'][il] = \
+            zt_layers[group][il,2] = \
                     np.average(tave_atom[idx])
-            zt_layers[group]['natoms'][il] = len(idx)
-    
+        
     ## outputfile
     if outfile is not None:
-        write_nemd_temperatures(outfile, zt_layers, nstructures=nstructures)
-    
+        write_nemd_temperatures(
+                outfile, zt_layers, 
+                nstructures=nstructures,
+                unit_length='nm'
+                )
     return zt_layers
 
 def write_nemd_temperatures(outfile, temp_layers, 
         unit_length='nm', nstructures=None):
     """ Write temperature profile obtained with a NEMD simulation
+    temp_layers : dict of ndarray
+        temp_layers[group][n,3], (number of atoms, position[A], temperature[K])
     """
     ofs = open(outfile, 'w')
     if nstructures is not None:
-        ofs.write("# numbre of structures : %d\n"%(nstructures))
+        ofs.write("# number of structures : %d\n"%(nstructures))
     ofs.write("# natoms position[%s] temperature[K]\n"%(unit_length))
     for group in temp_layers.keys():
         ofs.write('## %s\n'%(group))
-        nlayers = len(temp_layers[group]['natoms'])
+        nlayers = len(temp_layers[group])
         for il in range(nlayers):
             ofs.write("%3d %15.8f  %8.3f\n"%(
-                temp_layers[group]['natoms'][il], 
-                temp_layers[group]['positions'][il],
-                temp_layers[group]['temperatures'][il]
+                temp_layers[group][il,0],
+                temp_layers[group][il,1],
+                temp_layers[group][il,2]
                 ))
         ofs.write("\n")
     ofs.close()

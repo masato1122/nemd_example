@@ -38,7 +38,7 @@ def _set_fecl3_charges(images,
     
 def get_FeCl3_intercalated_graphite(
         nglayers=3, rectangular=True, distance=3.0, tgra=3.35,
-        ncells=[1,1,1]):
+        ncells=[1,1,1], iax_out=2):
     """ Create FeCl3-intercalated graphite
     nglayers :
         number of graphene layers
@@ -48,8 +48,7 @@ def get_FeCl3_intercalated_graphite(
     ncells : array, shape=(3)
         number of unit cells
     """
-    iax = 2
-
+    
     ## prepare FeCl3
     fecl3_std = get_FeCl3_structure(shape="standerdized")
     fecl3 = make_supercell(fecl3_std, [[2,0,0], [0,2,0], [0,0,1]])
@@ -57,7 +56,7 @@ def get_FeCl3_intercalated_graphite(
     ## prepare graphene
     graphene = get_stacking_graphene(na=5, nb=5, nc=nglayers, distance=tgra)
     
-    ## set axis
+    ## set axis: z-axis will be c-axis.
     _rotate_in_2D(fecl3, a0=[1,0])
     _rotate_in_2D(graphene, a0=[1,0])
     
@@ -83,14 +82,13 @@ def get_FeCl3_intercalated_graphite(
     ## make a supercell
     gic = make_supercell(gic, 
             [[ncells[0],0,0], [0,ncells[1],0], [0,0,ncells[2]]])
-    gic = get_ordered_structure(gic, iax=iax)
+    gic = get_ordered_structure(gic, iax=iax_out)
     gic.wrap()
-    
+     
     ## set charges
     _set_fecl3_charges(gic)
-    
     ##
-    set_tags4md_structure(gic, iax_out=iax, gap=2.0)
+    set_tags4md_structure(gic, iax_out=iax_out, gap=2.0)
     return gic
 
 def _get_superposed_structure(
