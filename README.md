@@ -19,17 +19,17 @@ python mk_graphite_nemd.py -n 4 -m 3
 To make LAMMPS input scripts and run jobs:
 
 ``` simple way
-cd ~/example
-sh do.sh
-cd ./out
-lmp_mpi < nemd0.in > nemd0.log
-lmp_mpi < nemd1.in > nemd1.log
+cd .../example
+sh mkneme.sh
+cd ./{created_directory}
+lmp_mpi < nemd0.in > log0.txt
+lmp_mpi < nemd1.in > log1.txt
 ```
 
-After the calculations are finished, analyze results:
+After the calculations, analyze results:
 
 ```
-sh analyze.sh
+sh ../analyze_{direction_of_heat_flow}.sh
 ```
 
 # Reference
