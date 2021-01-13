@@ -22,7 +22,7 @@ def write_nemd_inputs(atoms,
     parameters['time_increase'] = time_increase
     parameters['time_nemd'] = time_nemd
     parameters['thot'] = thot
-    parameters['tcols'] = tcold
+    parameters['tcold'] = tcold
     if output_minimization is None:
         parameters['dump_minimization'] = None
     
@@ -88,9 +88,9 @@ def write_nemd_input(atoms,
     ofs.write("variable tstep   equal %f\n"%(parameters['time_step']))
     ofs.write("variable tdamp   equal %f\n"%(parameters['damping_time']))
     if type == 'npt':
-        ofs.write("variable MDTIME  equal %f\n"%(parameters['time_npt']))
+        ofs.write("variable MDTIME  equal %f  # ps\n"%(parameters['time_npt']))
     else:
-        ofs.write("variable MDTIME  equal %f\n"%(parameters['time_nemd']))
+        ofs.write("variable MDTIME  equal %f  # ps\n"%(parameters['time_nemd']))
     ofs.write("\n")
     ofs.write("variable NRUN      equal ${MDTIME}/${tstep}\n")
     ofs.write("variable THERSTEP  equal ${NRUN}/%d\n"%(
@@ -202,7 +202,8 @@ def write_nemd_input(atoms,
                 create_velocity=False,
                 drag=0.0
                 )
-        
+        ofs.write("write_restart  restart_npt.nemd\n")
+         
         if parameters['time_increase'] is not None:
             ofs.write("# --- 3. set temperature gradient\n")
             _write_nemd_simulation(ofs, 

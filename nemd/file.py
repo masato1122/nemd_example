@@ -65,7 +65,7 @@ def write_lammps_data(filename, images=None, charge=False):
     for ia, atom in enumerate(images):
         ofs.write("%d  %d"%(ia+1, atom.tag))
         if charge:
-            ofs.write(" %7.3f"%(images.get_initial_charges()[ia]))
+            ofs.write(" %10.7f"%(images.get_initial_charges()[ia]))
         for j in range(3):
             ofs.write(" %15.10f" % (atom.position[j]))
         ofs.write("\n")

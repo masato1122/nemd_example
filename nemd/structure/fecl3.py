@@ -29,13 +29,13 @@ def _set_fecl3_charges(images,
     ## charges on carbon atoms
     idx = [i for i, el in enumerate(symbols) if el == 'C']
     ncarbons = len(idx)
+    ecarbon = - np.sum(charges) / ncarbons
     if ncarbons != 0:
-        ecarbon = np.sum(charges) / ncarbons
         charges[idx] = ecarbon
     
     ## set charges
     images.set_initial_charges(charges)
-    
+
 def get_FeCl3_intercalated_graphite(
         nglayers=3, rectangular=True, distance=3.0, tgra=3.35,
         ncells=[1,1,1], iax_out=2):
