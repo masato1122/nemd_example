@@ -2,4 +2,3 @@
 from nemd.file import write_lammps_data
 from nemd.input import write_nemd_inputs
 
-

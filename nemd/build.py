@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from optparse import OptionParser
-#import pymatgen as mg
 import ase, ase.build
+#import pymatgen as mg
 
 def build_graphite(n=3, m=4, type='armchair', distance=3.35, C_C=1.42,
         thd_layer=1.0):

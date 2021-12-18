@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from optparse import OptionParser
 import pubchempy as pcp
 import ase, ase.io
 from ase.build.supercells import make_supercell
