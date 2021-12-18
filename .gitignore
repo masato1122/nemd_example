@@ -1,8 +1,0 @@
-# ignored files
-.gitignore
-*.pyc
-*/__pychache__
-do.sh
-mytest/
-doc/do.sh
-
