@@ -6,9 +6,9 @@ import ase, ase.io
 from ase.build.supercells import make_supercell
 
 ## pymatgen
-from pymatgen import MPRester
-from pymatgen.symmetry.bandstructure import HighSymmKpath
-import spglib
+#from pymatgen.ext.matproj import MPRester
+#from pymatgen.symmetry.bandstructure import HighSymmKpath
+#import spglib
 
 from nemd.structure.crystal import (
         get_pubchem_structure, 

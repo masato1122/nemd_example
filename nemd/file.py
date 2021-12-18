@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from optparse import OptionParser
-import pymatgen as mg
+#import pymatgen as mg
 import ase, ase.build
 
 def _check_rectangular(cell, symprec=1e-5):
