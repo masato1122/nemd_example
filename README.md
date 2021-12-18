@@ -1,6 +1,7 @@
 # nemd_example
 
-Simple examples for non-equilibrium molecular dynamics (NEMD) simulation with LAMMPS package
+Simple examples for non-equilibrium molecular dynamics (NEMD) simulation with LAMMPS package.
+Muller-Plathe method is employed.
 
 # Prerequisite
 
