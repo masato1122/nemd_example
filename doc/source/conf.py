@@ -6,13 +6,12 @@ mathjax_path = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
 
 # -- Project information 
 
-project = 'aiida-alamode'
+project = 'nemd_example'
 copyright = '2021, M. Ohnishi'
 author = 'M. Ohnishi'
 
 # The full version, including alpha/beta/rc tags
-release = 'Sept. 13th, 2021'
-
+release = 'Dec. 18th, 2021'
 
 # -- General configuration 
 
