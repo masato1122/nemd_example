@@ -1,4 +1,5 @@
 # ignored files
 *.pyc
 */__pychache__
+do.sh
 

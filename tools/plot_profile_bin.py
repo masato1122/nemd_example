@@ -191,10 +191,22 @@ def plot_temperature_profile(ax, df_ave, lw=0.8, ms=2.0):
     set_axis(ax)
     set_legend(ax, fs=5, alpha=0.5)
 
+def __conver_from_df_to_plotstyle(df):
+    keys = df.keys()
+    dump = {}
+    for key in keys:
+        ndat = len(df[key])
+        dump[key] = np.zeros((ndat,3))
+        dump[key][:,0] = df[key]['natoms']
+        dump[key][:,1] = df[key]['position']
+        dump[key][:,2] = df[key]['temperature']
+    return dump
+
 def main(options):
     
     ## read log file
     plot_log = False
+    df_log = None
     energy_labels = ['f_t1', 'f_t2']
     if options.log is not None:
         df_log = read_log_file(options.log, ilog=0)
@@ -230,26 +242,40 @@ def main(options):
         outfile = "%s/%s.csv"%(options.outdir, name)
         df_ave[name].to_csv(outfile, index=False)
     
-    ## plot data
-    fig, axes = make_figure(
-            fontsize=6, fig_width=fig_width, aspect=aspect, nfigs=nfigs)
-    plot_temperature_profile(axes[0], df_ave)
-    if plot_log:
-        
-        ## get cross section
-        atoms = ase.io.read(
-                options.lmpdump, format='lammps-dump-text', index=0)
-        cross = atoms.cell[0,0] * atoms.cell[1,1]      # A^2
-        
-        from tips.plot import plot_energy
-        heat = plot_energy(
-                axes[1], df_log, 
-                labels=energy_labels,
-                cross_section=cross)
-        
-    fig.savefig(options.figname, dpi=300, bbox_inches='tight')
-    print(" Output", options.figname)
-    return fig
+    ## get cross section
+    atoms = ase.io.read(
+            options.lmpdump, format='lammps-dump-text', index=0)
+    cross = atoms.cell[0,0] * atoms.cell[1,1]      # A^2
+    
+    ##
+    import nemd.plot
+    #print(df_ave) 
+    temps = __conver_from_df_to_plotstyle(df_ave)
+    nemd.plot.plot_temperature_profile(
+            temps, log=df_log,
+            cross_section=cross,
+            figname=options.figname,
+            plot_layer=False,
+            dpi=300
+            )
+    
+    exit()
+
+    ### plot data
+    #fig, axes = make_figure(
+    #        fontsize=6, fig_width=fig_width, aspect=aspect, nfigs=nfigs)
+    #plot_temperature_profile(axes[0], df_ave)
+    #if plot_log:
+    #    
+    #    from tips.plot import plot_energy
+    #    heat = plot_energy(
+    #            axes[1], df_log, 
+    #            labels=energy_labels,
+    #            cross_section=cross)
+    #    
+    #fig.savefig(options.figname, dpi=300, bbox_inches='tight')
+    #print(" Output", options.figname)
+    #return fig
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -270,8 +296,8 @@ if __name__ == '__main__':
             default=5.0, 
             help="length of each bin [A]. This is used only for in-plane.")
     
-    parser.add_option("--direction", dest="direction", type="string",
-            default="out", help="in or out")
+    #parser.add_option("--direction", dest="direction", type="string",
+    #        default="out", help="in or out")
     
     parser.add_option("--outdir", dest="outdir", type="string",
             default="out_ave", help="output directory")

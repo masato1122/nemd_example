@@ -84,7 +84,7 @@ def plot_temperature_profile_atom(
 
 def plot_temperature_profile(temps, log=None,
         cross_section=None,
-        xunit='nm', group4plot=None,
+        xunit='nm', 
         figname=None, plot_layer=True,
         dpi=300, fontsize=6, lw=0.6, ms=2.0
         ):
@@ -96,6 +96,7 @@ def plot_temperature_profile(temps, log=None,
     log : DataFrame object
     cross_section : unit=[A^2]
     """
+    cmap = plt.get_cmap("tab10")
     ##
     if log is not None:
         nfigs = 2
@@ -112,9 +113,16 @@ def plot_temperature_profile(temps, log=None,
             nfigs=nfigs)
     
     ## plot energy
+    flux = None
     if log is not None:
         from tips.plot import plot_energy
-        heat = plot_energy(axes[1], log, cross_section=cross_section)   # Watt
+        if cross_section is None:
+            print("")
+            print(" Error: cross sectional area is not given.")
+            print("")
+        else:
+            ## flux : heat flux [W/m^2]
+            flux = plot_energy(axes[1], log, cross_section=cross_section)   # Watt
     
     ## unit
     if xunit == 'nm':
@@ -137,6 +145,14 @@ def plot_temperature_profile(temps, log=None,
             continue
         
         ##
+        if 'mid' in group:
+            out, xfit, yfit = get_gradient(
+                    temps[group][:,1], temps[group][:,2])
+            gradient = out[0]
+        else:
+            gradient = None
+
+        ##
         if plot_layer:
             zpos, idx_layers = get_layer_information(temps[group][:,1], gap=1.5)
             temp_ave = np.zeros(len(zpos))
@@ -152,7 +168,46 @@ def plot_temperature_profile(temps, log=None,
                 s=ms, marker=marker, linewidth=lw,
                 edgecolor=col,
                 facecolor='None', label=group)
-    
+        
+        ##
+        if gradient is not None:
+            axes[0].plot(
+                    xfit * xmod, 
+                    yfit, 
+                    linestyle='-', lw=lw*3, c=cmap(1), alpha=0.7,
+                    marker='None', markersize=ms
+                    )
+            nfit = len(xfit)
+            line = "%.3e K/nm\n"%(gradient / xmod)
+            if flux is not None:
+                kappa = flux / abs(gradient) / 1e10   # W/m-K
+                line += "%.3f W/m-K"%(kappa)
+                ##
+                print(" Kappa: %.3f W/m-K"%(kappa))
+            ##
+            axes[0].text(
+                    xfit[int(nfit*0.5)] * xmod, 
+                    np.min(yfit), 
+                    line,
+                    fontsize=5, 
+                    transform=axes[0].transData,
+                    horizontalalignment="center", 
+                    verticalalignment="top"
+                    )
+        ##
+        if group == 'hot' or group == 'cold':
+            axes[0].text(
+                    zpos[0] * xmod,
+                    np.average(temp_ave),
+                    "%.2f"%(np.average(temp_ave)), 
+                    fontsize=5, 
+                    transform=axes[0].transData,
+                    horizontalalignment="right", 
+                    verticalalignment="center"
+                    )
+                   
+
+
     set_axis(axes[0])
     set_legend(axes[0], alpha=0.5, fs=6)
     
@@ -162,4 +217,31 @@ def plot_temperature_profile(temps, log=None,
         print(" Output", figname)
     
     return fig
+
+def get_gradient(xdat, temps, buff=0.1, nfit=11):
+    """
+    Parameters
+    -------------
+    xdat : unit=[A]
+    temps : unit=[K]
+    buff :
+        both edges with the length of buffer*(total length) are excluded to get
+        the average.
+    Return
+    -------------
+    out : shape=(2)
+        result of polyfit
+    xfit, yfit : shape=(nfit)
+    """
+    xmin = np.min(xdat)
+    xmax = np.max(xdat)
+    length = xmax - xmin
+    x0 = xmin + length * buff
+    x1 = xmax - length * buff
+    n = len(xdat)
+    idx_ave = [i for i in range(n) if x0 <= xdat[i] <= x1]
+    out = np.polyfit(xdat[idx_ave], temps[idx_ave], 1)
+    xfit = np.linspace(x0, x1, nfit)
+    yfit = np.polyval(out, xfit)
+    return out, xfit, yfit
 

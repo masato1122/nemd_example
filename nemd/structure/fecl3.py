@@ -176,7 +176,7 @@ def get_FeCl3_primitive():
 
 def get_FeCl3_structure(shape="standerdized", layer=True):
     """
-    cParameters
+    Parameters
     ------------
     shape : string
         primitive, standerdized, layer, rectangular

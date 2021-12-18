@@ -9,6 +9,9 @@ def plot_energy(
         cross_section=None
         ):
     """ Return heat flux [W]
+    Parameters
+    -------------
+    cross_section : unit=[A^2]
     """
     alpha_y = 1e-3
     

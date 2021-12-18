@@ -24,6 +24,7 @@ from nemd.structure.fecl3 import (
         )
 from nemd.structure.gic import (
         get_indices_at_layers,
-        get_ordered_structure
+        get_ordered_structure,
+        get_layer_information
         )
 
