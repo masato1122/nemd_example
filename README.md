@@ -35,10 +35,10 @@ After the calculations, analyze results:
 sh ../analyze_{direction_of_heat_flow}.sh
 ```
 
-[](
-# Manual (test)\
+<!--
+# Manual (test)
 * https://masato1122.github.io/nemd_example/
-)
+-->
 
 # Reference
 
