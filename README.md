@@ -29,10 +29,10 @@ lmp_mpi < nemd0.in > log0.txt
 lmp_mpi < nemd1.in > log1.txt
 ```
 
-After the calculations, analyze results:
+To analys results after the calculations:
 
 ```
-sh ../analyze_{direction_of_heat_flow}.sh
+sh ../analyze_{direction_of_heat_flow (in/out)}.sh
 ```
 
 <!--
