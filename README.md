@@ -3,13 +3,13 @@
 Simple examples for non-equilibrium molecular dynamics (NEMD) simulation with LAMMPS package.
 Muller-Plathe method is employed.
 
-# Prerequisite
+## Prerequisite
 
 * python>=3.0
 * ase
 * pubchempy
 
-# How to Use
+## How to Use
 
 To make LAMMPS input scripts:
 
@@ -40,7 +40,7 @@ sh ../analyze_{direction_of_heat_flow}.sh
 * https://masato1122.github.io/nemd_example/
 -->
 
-# Reference
+## Reference
 
 * M. Ohnishi et al., Phys. Rev. B 95, 155405 (2017).
 
