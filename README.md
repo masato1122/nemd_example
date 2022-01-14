@@ -42,7 +42,7 @@ sh ../analyze_{direction_of_heat_flow (in/out)}.sh
 
 ## How To Cite
 
-If you use these scripts, please cite it with:
+If you use these scripts, please cite them with:
 
 * M. Ohnishi et al., Phys. Rev. B 95, 155405 (2017).
 
