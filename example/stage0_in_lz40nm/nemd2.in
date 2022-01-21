@@ -1,0 +1,86 @@
+clear
+
+# ----- MD parameters -----
+variable tstep   equal 0.000500
+variable tdamp   equal 0.500000
+variable MDTIME  equal 1000.000000  # ps
+
+variable NRUN      equal ${MDTIME}/${tstep}
+variable THERSTEP  equal ${NRUN}/100
+variable DUMPSTEP  equal ${NRUN}/10
+variable TEMP      equal 300.00
+
+variable  kb   equal 1.3806488e-23
+variable  ee   equal 1.60217657e-19
+
+# ----- Initialize simulation -----
+units         metal
+atom_style    atomic
+dimension     3
+boundary      p p p
+atom_modify   map array
+read_restart  restart1.nemd
+timestep      ${tstep}
+
+# ----- Define potentials -----
+pair_style hybrid lj/cut 10.0 tersoff tersoff tersoff tersoff 
+
+pair_coeff * * tersoff 1 opt.tersoff C NULL NULL NULL
+pair_coeff * * tersoff 2 opt.tersoff NULL C NULL NULL
+pair_coeff * * tersoff 3 opt.tersoff NULL NULL C NULL
+pair_coeff * * tersoff 4 opt.tersoff NULL NULL NULL C
+
+pair_coeff 1 2 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 1 3 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 1 4 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 2 3 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 2 4 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 3 4 lj/cut 0.00239670  3.41478 10.00
+
+# ---- Bin ----- 
+neighbor      2.0 bin
+neigh_modify  delay 0 every 1 check yes
+
+# ----- Groups -----
+region Rm1 block INF INF INF INF INF 160.360192 units box
+region Rh  block INF INF INF INF 160.360192 200.450240 units box
+region Rm2 block INF INF INF INF 200.450240 360.810432 units box
+region Rc  block INF INF INF INF 360.810432 INF units box
+
+group hot    region Rh
+group cold   region Rc
+group mid1   region Rm1
+group mid2   region Rm2
+group middle union  mid1 mid2
+
+# ----- compute -----
+compute   1        all temp
+compute   ke       all ke/atom
+
+reset_timestep 0
+
+# ----- NEMD simulation -----
+compute Thot hot temp
+compute Tcold cold temp
+
+fix t1 hot  langevin 305.00 305.00 ${tdamp} 6344300 tally yes 
+fix t2 cold langevin 295.00 295.00 ${tdamp} 2799868 tally yes 
+fix a1 all nve
+fix_modify t1 temp Thot
+fix_modify t2 temp Tcold
+
+variable     temp atom c_ke*${ee}/1.5/${kb}
+variable     diff equal f_t2-f_t1
+fix          tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp
+
+thermo_style custom step pe etotal temp c_Thot c_Tcold f_t1 f_t2 v_diff
+thermo       ${THERSTEP}
+dump         nemd all custom ${DUMPSTEP} nemd2.dump id type x y z f_tempave
+dump_modify  nemd sort id
+dump_modify  nemd format float %13.8f 
+run          ${NRUN}
+undump     nemd
+
+write_restart  restart2.nemd
+
+print "All done!"
