@@ -59,8 +59,8 @@ reset_timestep 0
 compute Thot hot temp
 compute Tcold cold temp
 
-fix t1 hot  langevin 305.00 305.00 ${tdamp} 4226438 tally yes 
-fix t2 cold langevin 295.00 295.00 ${tdamp} 9806107 tally yes 
+fix t1 hot  langevin 305.00 305.00 ${tdamp} 2607835 tally yes 
+fix t2 cold langevin 295.00 295.00 ${tdamp} 3349732 tally yes 
 fix a1 all nve
 fix_modify t1 temp Thot
 fix_modify t2 temp Tcold

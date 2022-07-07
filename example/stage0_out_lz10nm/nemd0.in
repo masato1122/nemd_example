@@ -68,7 +68,7 @@ undump    id1
 #--- 2-1. NPT
 reset_timestep 0
 
-velocity  all create ${TEMP} 4281178 rot yes dist gaussian
+velocity  all create ${TEMP} 1978215 rot yes dist gaussian
 velocity  all zero linear
 
 fix  2 all npt temp 300.000000 300.000000 ${tdamp} aniso 0.000000 0.000000 0.050000 drag 2.000000
