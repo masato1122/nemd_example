@@ -40,7 +40,7 @@ sh ../analyze_{direction_of_heat_flow (in/out)}.sh
 * https://masato1122.github.io/nemd_example/
 -->
 
-## How To Cite
+## Citation
 
 If you use these scripts, please cite them with:
 
