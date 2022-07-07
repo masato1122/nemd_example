@@ -23,9 +23,15 @@ try:
             get_FeCl3_intercalated_graphite,
             get_FeCl3_structure
             )
+except:
+    pass
+    
+try:
     from nemd.structure.gic import (
             get_indices_at_layers,
             get_ordered_structure,
             get_layer_information
             )
+except:
+    pass
 

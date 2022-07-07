@@ -1,0 +1,114 @@
+clear
+
+# ----- MD parameters -----
+variable tstep   equal 0.000500
+variable tdamp   equal 0.500000
+variable MDTIME  equal 500.000000  # ps
+
+variable NRUN      equal ${MDTIME}/${tstep}
+variable THERSTEP  equal ${NRUN}/100
+variable DUMPSTEP  equal ${NRUN}/10
+variable TEMP      equal 300.00
+
+variable  kb   equal 1.3806488e-23
+variable  ee   equal 1.60217657e-19
+
+# ----- Initialize simulation -----
+units         metal
+atom_style    atomic
+dimension     3
+boundary      p p p
+atom_modify   map array
+read_data     data.lammps
+timestep      ${tstep}
+
+# ----- Define potentials -----
+pair_style hybrid lj/cut 10.0 tersoff tersoff tersoff tersoff 
+
+pair_coeff * * tersoff 1 opt.tersoff C NULL NULL NULL
+pair_coeff * * tersoff 2 opt.tersoff NULL C NULL NULL
+pair_coeff * * tersoff 3 opt.tersoff NULL NULL C NULL
+pair_coeff * * tersoff 4 opt.tersoff NULL NULL NULL C
+
+pair_coeff 1 2 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 1 3 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 1 4 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 2 3 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 2 4 lj/cut 0.00239670  3.41478 10.00
+pair_coeff 3 4 lj/cut 0.00239670  3.41478 10.00
+
+# ---- Bin ----- 
+neighbor      2.0 bin
+neigh_modify  delay 0 every 1 check yes
+
+# ----- Groups -----
+group     mid1 id  1:14112
+group      hot id  14113:15120
+group     mid2 id  15121:29232
+group     cold id  29233:30240
+
+group mobile union mid1 mid2
+
+# ----- compute -----
+compute   1        all temp
+compute   ke       all ke/atom
+
+reset_timestep 0
+
+#----- NPT simulation -----
+
+#--- 1. minimization
+dump         id1 all custom 100000 mini.dump id type x y z
+dump_modify  id1 sort id
+dump_modify  id1 format float %13.8f 
+thermo    10000
+minimize  1.00000e-20 1.00000e-04 50000 50000
+undump    id1
+
+#--- 2-1. NPT
+reset_timestep 0
+
+velocity  all create ${TEMP} 4281178 rot yes dist gaussian
+velocity  all zero linear
+
+fix  2 all npt temp 300.000000 300.000000 ${tdamp} aniso 0.000000 0.000000 0.050000 drag 2.000000
+
+variable  temp atom c_ke*${ee}/1.5/${kb}
+fix       tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp
+
+thermo_style custom step temp press pxx pyy pzz pe ke etotal evdwl ecoul epair ebond elong etail vol
+thermo       ${THERSTEP}
+dump         id2 all custom ${DUMPSTEP} npt.dump id type x y z f_tempave
+dump_modify  id2 sort id
+dump_modify  id2 format float %13.8f 
+run       ${NRUN}
+unfix     2
+unfix     tempave
+undump    id2
+
+
+#--- 2-2. NPT
+fix  2 all npt temp 300.000000 300.000000 ${tdamp} &
+     x 0.000000 0.000000 10.000000 &
+     y 0.000000 0.000000 10.000000 &
+     z 0.000000 0.000000 1.000000 
+
+variable  temp atom c_ke*${ee}/1.5/${kb}
+fix       tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp
+
+thermo_style custom step temp press pxx pyy pzz pe ke etotal evdwl ecoul epair ebond elong etail vol
+thermo       ${THERSTEP}
+dump         id2 all custom ${DUMPSTEP} npt.dump id type x y z f_tempave
+dump_modify  id2 sort id
+dump_modify  id2 format float %13.8f 
+run       ${NRUN}
+unfix     2
+unfix     tempave
+undump    id2
+
+write_restart  restart_npt.nemd
+#--- prepare fore NEMD simulation
+reset_timestep 0
+write_restart  restart0.nemd
+
+print "All done!"

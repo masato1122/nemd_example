@@ -30,12 +30,15 @@ import math
 import numpy as np
 from optparse import OptionParser
 
-from nemd.structure import (
-        get_FeCl3_intercalated_graphite,
-        get_FeCl3_structure,
-        get_indices_at_layers,
-        get_ordered_structure
-        )
+try:
+    from nemd.structure import (
+            get_FeCl3_intercalated_graphite,
+            get_FeCl3_structure,
+            )
+except:
+    pass
+
+from nemd.structure import get_indices_at_layers, get_ordered_structure
 from nemd.build import build_graphite
 
 from nemd import write_lammps_data, write_nemd_inputs
