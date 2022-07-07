@@ -2,10 +2,11 @@
 WORKDIR=$(cd $(dirname $0); pwd)
 
 ### Stractural Parameters
-stage=0                          ## <0: FeCl3, =0: graphite, >0: FeCl3-GIC
+stage=3                          ## <0: FeCl3, =0: graphite, >0: FeCl3-GIC
 #direction="out"; la=5; lb=5; lc=24;      # [nm]
-#direction="in";  la=40; lb=5; lc=5
-direction="in";  la=40; lb=2.4; lc=2.4
+direction="out"; la=5; lb=5; lc=10;      # [nm]
+##direction="in";  la=40; lb=5; lc=5
+##direction="in";  la=40; lb=2.4; lc=2.4
 
 ### temperatures [K]
 Thot=305; Tcold=295

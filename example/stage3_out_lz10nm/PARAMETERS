@@ -1,0 +1,18 @@
+stage     3
+direction out
+
+la        5 nm
+lb        5 nm
+lc        10 nm
+Lmiddle   4.0 nm
+
+Thot      305 K
+Tcold     295 K
+
+tnemd     2000 ps
+tnpt      500 ps
+tdamp     0.5 ps
+pdxy      10 ps
+pdz       1 ps
+
+lthermo   0.1 (scaled length)

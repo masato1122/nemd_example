@@ -1,0 +1,95 @@
+clear
+
+# ----- MD parameters -----
+variable tstep   equal 0.000500
+variable tdamp   equal 0.500000
+variable MDTIME  equal 2000.000000  # ps
+
+variable NRUN      equal ${MDTIME}/${tstep}
+variable THERSTEP  equal ${NRUN}/100
+variable DUMPSTEP  equal ${NRUN}/10
+variable TEMP      equal 300.00
+
+variable  kb   equal 1.3806488e-23
+variable  ee   equal 1.60217657e-19
+
+# ----- Initialize simulation -----
+units         metal
+atom_style    charge
+dimension     3
+boundary      p p p
+atom_modify   map array
+read_restart  restart2.nemd
+timestep      ${tstep}
+
+# ----- Define potentials -----
+pair_style hybrid lj/cut/coul/long 10.0 tersoff tersoff tersoff tersoff 
+
+pair_coeff * * tersoff 1 opt.tersoff NULL NULL C NULL NULL NULL
+pair_coeff * * tersoff 2 opt.tersoff NULL NULL NULL C NULL NULL
+pair_coeff * * tersoff 3 opt.tersoff NULL NULL NULL NULL C NULL
+pair_coeff * * tersoff 4 opt.tersoff NULL NULL NULL NULL NULL C
+
+pair_coeff 1 1 lj/cut/coul/long 0.00056370  2.59430 10.00
+pair_coeff 1 2 lj/cut/coul/long 0.00235557  3.05534 10.00
+pair_coeff 1 3 lj/cut/coul/long 0.00116233  3.00454 10.00
+pair_coeff 1 4 lj/cut/coul/long 0.00116233  3.00454 10.00
+pair_coeff 1 5 lj/cut/coul/long 0.00116233  3.00454 10.00
+pair_coeff 1 6 lj/cut/coul/long 0.00116233  3.00454 10.00
+pair_coeff 2 2 lj/cut/coul/long 0.00984340  3.51638 10.00
+pair_coeff 2 3 lj/cut/coul/long 0.00485713  3.46558 10.00
+pair_coeff 2 4 lj/cut/coul/long 0.00485713  3.46558 10.00
+pair_coeff 2 5 lj/cut/coul/long 0.00485713  3.46558 10.00
+pair_coeff 2 6 lj/cut/coul/long 0.00485713  3.46558 10.00
+pair_coeff 3 4 lj/cut/coul/long 0.00239670  3.41478 10.00
+pair_coeff 3 5 lj/cut/coul/long 0.00239670  3.41478 10.00
+pair_coeff 3 6 lj/cut/coul/long 0.00239670  3.41478 10.00
+pair_coeff 4 5 lj/cut/coul/long 0.00239670  3.41478 10.00
+pair_coeff 4 6 lj/cut/coul/long 0.00239670  3.41478 10.00
+pair_coeff 5 6 lj/cut/coul/long 0.00239670  3.41478 10.00
+
+kspace_style pppm 1.00e-05
+
+# ---- Bin ----- 
+neighbor      2.0 bin
+neigh_modify  delay 0 every 1 check yes
+
+# ----- Groups -----
+group     mid1 id  1:17880
+group      hot id  17881:19380
+group     mid2 id  19381:37260
+group     cold id  37261:38220
+
+group mobile union mid1 mid2
+
+# ----- compute -----
+compute   1        all temp
+compute   ke       all ke/atom
+
+reset_timestep 0
+
+# ----- NEMD simulation -----
+compute Thot hot temp
+compute Tcold cold temp
+
+fix t1 hot  langevin 305.00 305.00 ${tdamp} 9242937 tally yes 
+fix t2 cold langevin 295.00 295.00 ${tdamp} 4401183 tally yes 
+fix a1 all nve
+fix_modify t1 temp Thot
+fix_modify t2 temp Tcold
+
+variable     temp atom c_ke*${ee}/1.5/${kb}
+variable     diff equal f_t2-f_t1
+fix          tempave all ave/atom 1 ${DUMPSTEP} ${DUMPSTEP} v_temp
+
+thermo_style custom step pe etotal temp c_Thot c_Tcold f_t1 f_t2 v_diff
+thermo       ${THERSTEP}
+dump         nemd all custom ${DUMPSTEP} nemd3.dump id type x y z f_tempave
+dump_modify  nemd sort id
+dump_modify  nemd format float %13.8f 
+run          ${NRUN}
+undump     nemd
+
+write_restart  restart3.nemd
+
+print "All done!"
